@@ -146,6 +146,7 @@ export default function Grounding54321() {
   const [saved, setSaved] = useState(false)
   const startRef = useRef(null)
   const runningRef = useRef(false)
+  const conVozRef = useRef(true)
   const navigate = useNavigate()
 
   const runScript = async (conVoz) => {
@@ -157,7 +158,8 @@ export default function Grounding54321() {
       setScriptIdx(i)
       setTextoActual(step.texto)
       if (step.sentidoIdx !== null) setSentidoIdx(step.sentidoIdx)
-      if (conVoz) {
+      const usarVoz = conVozRef.current
+      if (usarVoz) {
         await speak(step.texto)
       } else {
         await new Promise(r => setTimeout(r, step.duracion))
@@ -168,6 +170,7 @@ export default function Grounding54321() {
   }
 
   const handleStart = (conVoz) => {
+    conVozRef.current = conVoz
     setState('running')
     setSentidoIdx(null)
     runScript(conVoz)
