@@ -12,6 +12,7 @@ const navGroups = [
     items: [
       { name: 'Kit de emergencia', sub: 'Ayuda inmediata', path: '/kit-emergencia', icon: AlertCircle },
       { name: 'Técnicas rápidas', sub: '1-3 minutos', path: '/tecnicas-rapidas', icon: Zap },
+      { name: 'Escalera de calmado', sub: 'Baja la intensidad paso a paso', path: '/escalera-calmado', icon: Zap },
     ]
   },
   {
@@ -42,7 +43,7 @@ const navGroups = [
     ]
   },
   {
-    label: '☀️ RUTINAS Y BIENESTAR',
+    label: '☀️ RUTINAS',
     subtitle: 'Hábitos que marcan la diferencia',
     color: 'text-amber-400',
     borderColor: 'border-amber-500/30',
