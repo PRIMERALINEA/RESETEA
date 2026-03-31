@@ -60,7 +60,6 @@ const navGroups = [
     items: [
       { name: 'Diario Emocional', sub: 'Registra cómo te sientes', path: '/diario', icon: BookOpen },
       { name: 'Test de Estrés', sub: 'Evalúa tu ansiedad', path: '/test-estres', icon: Brain },
-      { name: 'Mi Perfil', sub: 'Mis actividades y logros', path: '/perfil', icon: User },
     ]
   },
 ]
@@ -119,7 +118,7 @@ export default function Layout({ children, currentPageName }) {
             </div>
           </div>
 
-          {/* Inicio */}
+          {/* Inicio + Perfil */}
           <div className="px-4 pt-4">
             <Link to="/" onClick={() => setSidebarOpen(false)}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all mb-2 ${
@@ -129,6 +128,16 @@ export default function Layout({ children, currentPageName }) {
               <div>
                 <p className="font-semibold text-sm">Inicio</p>
                 <p className="text-xs opacity-60">Panel principal</p>
+              </div>
+            </Link>
+            <Link to="/perfil" onClick={() => setSidebarOpen(false)}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all mb-2 ${
+                isActive('/perfil') ? 'bg-teal-600 text-white shadow-md' : 'text-white/60 hover:bg-white/8 hover:text-white'
+              }`}>
+              <User className="w-5 h-5 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-sm">Mi Perfil</p>
+                <p className="text-xs opacity-60">Actividades y logros</p>
               </div>
             </Link>
           </div>
