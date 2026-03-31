@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/AuthContext'
-import { Wind, Anchor, BookOpen, Heart, Brain, Home, LogOut, Menu, X, ChevronDown, ChevronRight, Zap, AlertCircle, Sun } from 'lucide-react'
+import { Wind, Anchor, BookOpen, Heart, Brain, Home, LogOut, Menu, X, ChevronDown, ChevronRight, Zap, AlertCircle, Sun, User } from 'lucide-react'
 
 const navGroups = [
   {
@@ -60,6 +60,7 @@ const navGroups = [
     items: [
       { name: 'Diario Emocional', sub: 'Registra cómo te sientes', path: '/diario', icon: BookOpen },
       { name: 'Test de Estrés', sub: 'Evalúa tu ansiedad', path: '/test-estres', icon: Brain },
+      { name: 'Mi Perfil', sub: 'Mis actividades y logros', path: '/perfil', icon: User },
     ]
   },
 ]
