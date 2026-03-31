@@ -259,27 +259,22 @@ export default function EscaleraCalmado() {
           </div>
         </div>
 
-        {/* Toggle audio */}
-        <div className="flex items-center justify-between bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-4">
-          <div className="flex items-center gap-3">
-            {audioEnabled ? <Volume2 className="w-5 h-5 text-teal-600" /> : <VolumeX className="w-5 h-5 text-slate-400" />}
-            <div>
-              <p className="font-medium text-slate-800 text-sm">Voz guiada</p>
-              <p className="text-xs text-slate-400">{audioEnabled ? 'Activada' : 'Desactivada'}</p>
-            </div>
-          </div>
-          <button onClick={() => setAudioEnabled(!audioEnabled)}
-            className={`w-12 h-6 rounded-full transition-all ${audioEnabled ? 'bg-teal-500' : 'bg-slate-200'}`}>
-            <div className={`w-5 h-5 bg-white rounded-full shadow transition-all ${audioEnabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
+
+
+        <div className="flex flex-col gap-3">
+          <button onClick={() => { setAudioEnabled(true); handleStart() }}
+            className="w-full py-4 rounded-2xl text-white font-bold text-lg shadow-lg flex items-center justify-center gap-2"
+            style={{ background: 'linear-gradient(135deg, #7c3aed, #0f6b6b)' }}>
+            <Volume2 className="w-5 h-5" />
+            🎙️ Iniciar con voz guiada
+          </button>
+          <button onClick={() => { setAudioEnabled(false); handleStart() }}
+            className="w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
+            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(15,107,107,0.3)', color: '#0f6b6b' }}>
+            <Play className="w-4 h-4" />
+            Iniciar sin voz
           </button>
         </div>
-
-        <button onClick={handleStart}
-          className="w-full py-4 rounded-2xl text-white font-bold text-lg shadow-lg flex items-center justify-center gap-2"
-          style={{ background: 'linear-gradient(135deg, #1e3a8a, #0f6b6b)' }}>
-          <Play className="w-5 h-5" />
-          {audioEnabled ? 'Iniciar con voz guiada' : 'Iniciar sin voz'}
-        </button>
       </div>
     )
   }
