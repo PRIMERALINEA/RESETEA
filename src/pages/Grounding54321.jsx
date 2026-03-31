@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/api/supabaseClient'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Play, Volume2, CheckCircle } from 'lucide-react'
+import EvaluacionPrePost from '@/components/EvaluacionPrePost'
 
 const VOICE_ID = 'RgXx32WYOGrd7gFNifSf'
 const XI_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY
@@ -144,9 +145,10 @@ export default function Grounding54321() {
   const [textoActual, setTextoActual] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [evalFase, setEvalFase] = useState('pre')
+  const [malestarPre, setMalestarPre] = useState(null)
   const startRef = useRef(null)
   const runningRef = useRef(false)
-  const conVozRef = useRef(true)
   const navigate = useNavigate()
 
   const runScript = async (conVoz) => {
@@ -158,8 +160,7 @@ export default function Grounding54321() {
       setScriptIdx(i)
       setTextoActual(step.texto)
       if (step.sentidoIdx !== null) setSentidoIdx(step.sentidoIdx)
-      const usarVoz = conVozRef.current
-      if (usarVoz) {
+      if (conVoz) {
         await speak(step.texto)
       } else {
         await new Promise(r => setTimeout(r, step.duracion))
@@ -170,7 +171,6 @@ export default function Grounding54321() {
   }
 
   const handleStart = (conVoz) => {
-    conVozRef.current = conVoz
     setState('running')
     setSentidoIdx(null)
     runScript(conVoz)
@@ -243,20 +243,28 @@ export default function Grounding54321() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3">
-          <button onClick={() => handleStart(true)}
-            className="w-full py-4 rounded-2xl text-white font-bold text-lg shadow-lg flex items-center justify-center gap-2"
-            style={{ background: 'linear-gradient(135deg, #7c3aed, #0f6b6b)' }}>
-            <Volume2 className="w-5 h-5" />
-            🎙️ Iniciar con voz guiada
-          </button>
-          <button onClick={() => handleStart(false)}
-            className="w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
-            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(15,107,107,0.3)', color: '#0f6b6b' }}>
-            <Play className="w-4 h-4" />
-            Iniciar sin voz
-          </button>
-        </div>
+        {evalFase === 'pre' ? (
+          <EvaluacionPrePost
+            ejercicioId="grounding_54321"
+            ejercicioNombre="Grounding 5-4-3-2-1"
+            modo="pre"
+            onComplete={({ malestarPre: mp }) => { setMalestarPre(mp); setEvalFase('opciones') }}
+            onSkip={() => setEvalFase('opciones')}
+          />
+        ) : (
+          <div className="flex flex-col gap-3">
+            <button onClick={() => { handleStart(true); setEvalFase('ejercicio') }}
+              className="w-full py-4 rounded-2xl text-white font-bold text-lg shadow-lg flex items-center justify-center gap-2"
+              style={{ background: 'linear-gradient(135deg, #7c3aed, #0f6b6b)' }}>
+              <Volume2 className="w-5 h-5" /> 🎙️ Iniciar con voz guiada
+            </button>
+            <button onClick={() => { handleStart(false); setEvalFase('ejercicio') }}
+              className="w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
+              style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(15,107,107,0.3)', color: '#0f6b6b' }}>
+              <Play className="w-4 h-4" /> Iniciar sin voz
+            </button>
+          </div>
+        )}
       </div>
     )
   }
@@ -274,14 +282,26 @@ export default function Grounding54321() {
             Has usado los cinco sentidos para volver al presente. Nota cómo te sientes ahora comparado con antes.
           </p>
           <div className="flex flex-col gap-3 w-full mt-2">
-            <button onClick={async () => { await saveSession(); navigate(-1) }}
-              disabled={saving}
-              className="w-full py-3 rounded-2xl text-white font-bold"
-              style={{ background: saved ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}>
-              {saving ? 'Guardando...' : saved ? '✓ Guardado' : '💾 Guardar y cerrar'}
-            </button>
-            <button onClick={() => { setState('idle'); setSentidoIdx(null) }}
-              className="text-white/30 text-xs hover:text-white/50">Repetir</button>
+            {evalFase !== 'fin' ? (
+              <EvaluacionPrePost
+                ejercicioId="grounding_54321"
+                ejercicioNombre="Grounding 5-4-3-2-1"
+                modo="post"
+                malestarPre={malestarPre}
+                onComplete={async () => { await saveSession(); setEvalFase('fin') }}
+                onSkip={async () => { await saveSession(); navigate(-1) }}
+              />
+            ) : (
+              <>
+                <button onClick={() => navigate(-1)}
+                  className="w-full py-3 rounded-2xl text-white font-bold"
+                  style={{ background: 'rgba(74,222,128,0.25)', border: '1px solid rgba(255,255,255,0.2)' }}>
+                  ✓ Cerrar
+                </button>
+                <button onClick={() => { setState('idle'); setSentidoIdx(null); setEvalFase('pre') }}
+                  className="text-white/30 text-xs hover:text-white/50">Repetir</button>
+              </>
+            )}
           </div>
         </motion.div>
       </div>

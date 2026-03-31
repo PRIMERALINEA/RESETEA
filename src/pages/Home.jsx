@@ -2,7 +2,10 @@ import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/lib/AuthContext'
 import { motion } from 'framer-motion'
-import { Wind, Anchor, Heart, BookOpen, Brain, ChevronRight, Sparkles } from 'lucide-react'
+import { Wind, Anchor, Heart, BookOpen, Brain, ChevronRight, Sparkles, ClipboardList } from 'lucide-react'
+import { useState as useStateHome, useEffect as useEffectHome } from 'react'
+import { supabase } from '@/api/supabaseClient'
+import EvaluacionQuincenal from '@/components/EvaluacionQuincenal'
 
 const LOGO_URL = 'https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/Gemini_Generated_Image_rar33drar33drar3.png'
 
@@ -15,6 +18,26 @@ const modules = [
 ]
 
 export default function Home() {
+  const [mostrarQuincenal, setMostrarQuincenal] = useState(false)
+  const [quinc, setQuinc] = useState(false)
+
+  useEffect(() => {
+    const check = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from('evaluaciones_quincenales')
+        .select('created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+      if (!data || data.length === 0) { setQuinc(true); return }
+      const dias = Math.floor((Date.now() - new Date(data[0].created_at)) / (1000*60*60*24))
+      if (dias >= 14) setQuinc(true)
+    }
+    check()
+  }, [])
+
   const hour = new Date().getHours()
   const greeting = hour < 13 ? 'Buenos días' : hour < 20 ? 'Buenas tardes' : 'Buenas noches'
   const [showAll, setShowAll] = useState(false)
@@ -45,6 +68,31 @@ export default function Home() {
           <p className="text-teal-200/70 text-sm mt-1">Elige lo que necesitas ahora mismo</p>
         </div>
       </motion.div>
+
+      {/* Banner evaluación quincenal */}
+      {quinc && !mostrarQuincenal && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+          className="mb-4 rounded-2xl p-4 flex items-center gap-3 cursor-pointer hover:opacity-90 transition-all"
+          style={{ background: 'linear-gradient(135deg, #7c3aed22, #0f6b6b22)', border: '1px solid #7c3aed44' }}
+          onClick={() => setMostrarQuincenal(true)}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: '#7c3aed20' }}>
+            <ClipboardList className="w-5 h-5" style={{ color: '#7c3aed' }} />
+          </div>
+          <div className="flex-1">
+            <p className="font-black text-sm" style={{ color: '#7c3aed' }}>📋 Evaluación quincenal disponible</p>
+            <p className="text-slate-500 text-xs">2 minutos · Ayuda a seguir tu progreso</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-slate-400" />
+        </motion.div>
+      )}
+
+      {/* Modal evaluación quincenal */}
+      {mostrarQuincenal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)' }}>
+          <EvaluacionQuincenal onClose={() => { setMostrarQuincenal(false); setQuinc(false) }} />
+        </div>
+      )}
 
       {!showAll ? (
         <>
