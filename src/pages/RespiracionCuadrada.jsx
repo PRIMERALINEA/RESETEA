@@ -21,40 +21,52 @@ const VOICE_ID   = 'RgXx32WYOGrd7gFNifSf'
 const XI_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY
 const audioCache = {}
 
-async function speak(text) {
-  if (!XI_API_KEY) {
-    if (!window.speechSynthesis) return
-    const u = new SpeechSynthesisUtterance(text)
-    u.lang = 'es-ES'; u.rate = 0.75; u.pitch = 1.1; u.volume = 0.9
+function speakNow(text) {
+  if (!window.speechSynthesis) return
+  window.speechSynthesis.cancel()
+  const u = new SpeechSynthesisUtterance(text)
+  u.lang = 'es-ES'; u.rate = 0.78; u.pitch = 1.1; u.volume = 1.0
+  // Intentar voz femenina española
+  const loadVoice = () => {
     const voices = window.speechSynthesis.getVoices()
-    const fem = voices.find(v => v.lang === 'es-ES' && /female|mujer|mónica|lucia|elena/i.test(v.name))
-      || voices.find(v => v.lang === 'es-ES')
+    const fem = voices.find(v => v.lang === 'es-ES' && /female|mujer|mónica|lucia|elena|paulina/i.test(v.name))
+      || voices.find(v => v.lang.startsWith('es'))
     if (fem) u.voice = fem
-    window.speechSynthesis.cancel()
     window.speechSynthesis.speak(u)
-    return
   }
-  const key = `${VOICE_ID}_${text}`
-  try {
-    if (!audioCache[key]) {
-      const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
-        method: 'POST',
-        headers: { 'xi-api-key': XI_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text,
-          model_id: 'eleven_multilingual_v2',
-          voice_settings: { stability: 0.8, similarity_boost: 0.85, style: 0.2, use_speaker_boost: true }
+  if (window.speechSynthesis.getVoices().length > 0) {
+    loadVoice()
+  } else {
+    window.speechSynthesis.onvoiceschanged = loadVoice
+  }
+}
+
+async function speak(text) {
+  if (XI_API_KEY) {
+    const key = `${VOICE_ID}_${text}`
+    try {
+      if (!audioCache[key]) {
+        const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
+          method: 'POST',
+          headers: { 'xi-api-key': XI_API_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text,
+            model_id: 'eleven_multilingual_v2',
+            voice_settings: { stability: 0.8, similarity_boost: 0.85, style: 0.2, use_speaker_boost: true }
+          })
         })
-      })
-      if (!res.ok) throw new Error('ElevenLabs error')
-      audioCache[key] = URL.createObjectURL(await res.blob())
+        if (!res.ok) throw new Error('ElevenLabs error')
+        audioCache[key] = URL.createObjectURL(await res.blob())
+      }
+      const audio = new Audio(audioCache[key])
+      audio.volume = 0.95
+      await audio.play()
+      return
+    } catch (e) {
+      console.error('TTS error, usando navegador:', e)
     }
-    const audio = new Audio(audioCache[key])
-    audio.volume = 0.95
-    await audio.play()
-  } catch (e) {
-    console.error('TTS error:', e)
   }
+  speakNow(text)
 }
 
 function buildScript() {
