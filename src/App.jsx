@@ -14,6 +14,7 @@ import TecnicasRapidas from '@/pages/TecnicasRapidas'
 import KitEmergencia from '@/pages/KitEmergencia'
 import Rutinas from '@/pages/Rutinas'
 import EscaleraCalmado from '@/pages/EscaleraCalmado'
+import Grounding54321 from '@/pages/Grounding54321'
 import Layout from '@/components/Layout'
 
 function ProtectedRoute({ children }) {
@@ -46,6 +47,7 @@ export default function App() {
       <Route path="/respiracion/cuadrada" element={<P><RespiracionCuadrada /></P>} />
       <Route path="/relajacion/jacobson" element={<P><RelajacionJacobson /></P>} />
       <Route path="/escalera-calmado" element={<P><EscaleraCalmado /></P>} />
+      <Route path="/grounding" element={<P><Grounding54321 /></P>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
