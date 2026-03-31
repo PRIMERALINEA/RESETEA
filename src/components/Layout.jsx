@@ -1,9 +1,19 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/AuthContext'
-import { Wind, Anchor, BookOpen, Heart, Brain, Home, LogOut, Menu, X, ChevronDown, ChevronRight } from 'lucide-react'
+import { Wind, Anchor, BookOpen, Heart, Brain, Home, LogOut, Menu, X, ChevronDown, ChevronRight, Zap, AlertCircle, Sun } from 'lucide-react'
 
 const navGroups = [
+  {
+    label: '⚡ HERRAMIENTAS RÁPIDAS',
+    subtitle: 'Para el momento de necesidad',
+    color: 'text-red-400',
+    borderColor: 'border-red-500/30',
+    items: [
+      { name: 'Kit de emergencia', sub: 'Ayuda inmediata', path: '/kit-emergencia', icon: AlertCircle },
+      { name: 'Técnicas rápidas', sub: '1-3 minutos', path: '/tecnicas-rapidas', icon: Zap },
+    ]
+  },
   {
     label: '🌬️ RESPIRACIÓN',
     subtitle: 'Calma el estrés al momento',
@@ -32,6 +42,15 @@ const navGroups = [
     ]
   },
   {
+    label: '☀️ RUTINAS Y BIENESTAR',
+    subtitle: 'Hábitos que marcan la diferencia',
+    color: 'text-amber-400',
+    borderColor: 'border-amber-500/30',
+    items: [
+      { name: 'Rutinas diarias', sub: 'Mañana, examen, noche', path: '/rutinas', icon: Sun },
+    ]
+  },
+  {
     label: '📓 DIARIO & TEST',
     subtitle: 'Conoce tu estado emocional',
     color: 'text-amber-400',
@@ -47,7 +66,7 @@ const LOGO_URL = 'https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/pub
 
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [expandedGroups, setExpandedGroups] = useState({ '🌬️ RESPIRACIÓN': true })
+  const [expandedGroups, setExpandedGroups] = useState({ '⚡ HERRAMIENTAS RÁPIDAS': true })
   const { logout } = useAuth()
   const location = useLocation()
 
