@@ -8,6 +8,8 @@ import Anclajes from '@/pages/Anclajes'
 import Diario from '@/pages/Diario'
 import Relajacion from '@/pages/Relajacion'
 import TestEstres from '@/pages/TestEstres'
+import RespiracionCuadrada from '@/pages/RespiracionCuadrada'
+import RelajacionJacobson from '@/pages/RelajacionJacobson'
 import Layout from '@/components/Layout'
 
 function ProtectedRoute({ children }) {
@@ -27,13 +29,14 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/" element={
         <ProtectedRoute>
-          <Layout>
-            <Home />
-          </Layout>
+          <Layout><Home /></Layout>
         </ProtectedRoute>
       } />
       <Route path="/respiracion" element={
         <ProtectedRoute><Layout><Respiracion /></Layout></ProtectedRoute>
+      } />
+      <Route path="/respiracion/cuadrada" element={
+        <ProtectedRoute><RespiracionCuadrada /></ProtectedRoute>
       } />
       <Route path="/anclajes" element={
         <ProtectedRoute><Layout><Anclajes /></Layout></ProtectedRoute>
@@ -43,6 +46,9 @@ export default function App() {
       } />
       <Route path="/relajacion" element={
         <ProtectedRoute><Layout><Relajacion /></Layout></ProtectedRoute>
+      } />
+      <Route path="/relajacion/jacobson" element={
+        <ProtectedRoute><RelajacionJacobson /></ProtectedRoute>
       } />
       <Route path="/test-estres" element={
         <ProtectedRoute><Layout><TestEstres /></Layout></ProtectedRoute>
