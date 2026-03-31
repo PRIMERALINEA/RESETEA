@@ -10,49 +10,40 @@ import Relajacion from '@/pages/Relajacion'
 import TestEstres from '@/pages/TestEstres'
 import RespiracionCuadrada from '@/pages/RespiracionCuadrada'
 import RelajacionJacobson from '@/pages/RelajacionJacobson'
+import TecnicasRapidas from '@/pages/TecnicasRapidas'
+import KitEmergencia from '@/pages/KitEmergencia'
+import Rutinas from '@/pages/Rutinas'
 import Layout from '@/components/Layout'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-blue-50">
-      <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+    <div className="min-h-screen flex items-center justify-center bg-teal-50">
+      <div className="w-8 h-8 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin" />
     </div>
   )
   if (!user) return <Navigate to="/login" replace />
   return children
 }
 
+const P = ({ children }) => <ProtectedRoute>{children}</ProtectedRoute>
+const PL = ({ children }) => <ProtectedRoute><Layout>{children}</Layout></ProtectedRoute>
+
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/" element={
-        <ProtectedRoute>
-          <Layout><Home /></Layout>
-        </ProtectedRoute>
-      } />
-      <Route path="/respiracion" element={
-        <ProtectedRoute><Layout><Respiracion /></Layout></ProtectedRoute>
-      } />
-      <Route path="/respiracion/cuadrada" element={
-        <ProtectedRoute><RespiracionCuadrada /></ProtectedRoute>
-      } />
-      <Route path="/anclajes" element={
-        <ProtectedRoute><Layout><Anclajes /></Layout></ProtectedRoute>
-      } />
-      <Route path="/diario" element={
-        <ProtectedRoute><Layout><Diario /></Layout></ProtectedRoute>
-      } />
-      <Route path="/relajacion" element={
-        <ProtectedRoute><Layout><Relajacion /></Layout></ProtectedRoute>
-      } />
-      <Route path="/relajacion/jacobson" element={
-        <ProtectedRoute><RelajacionJacobson /></ProtectedRoute>
-      } />
-      <Route path="/test-estres" element={
-        <ProtectedRoute><Layout><TestEstres /></Layout></ProtectedRoute>
-      } />
+      <Route path="/" element={<PL><Home /></PL>} />
+      <Route path="/respiracion" element={<PL><Respiracion /></PL>} />
+      <Route path="/respiracion/cuadrada" element={<P><RespiracionCuadrada /></P>} />
+      <Route path="/anclajes" element={<PL><Anclajes /></PL>} />
+      <Route path="/diario" element={<PL><Diario /></PL>} />
+      <Route path="/relajacion" element={<PL><Relajacion /></PL>} />
+      <Route path="/relajacion/jacobson" element={<P><RelajacionJacobson /></P>} />
+      <Route path="/test-estres" element={<PL><TestEstres /></PL>} />
+      <Route path="/tecnicas-rapidas" element={<PL><TecnicasRapidas /></PL>} />
+      <Route path="/kit-emergencia" element={<PL><KitEmergencia /></PL>} />
+      <Route path="/rutinas" element={<PL><Rutinas /></PL>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
