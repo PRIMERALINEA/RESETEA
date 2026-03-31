@@ -14,8 +14,17 @@ export default function Login() {
   const [success, setSuccess] = useState('')
   const navigate = useNavigate()
 
+  const DOMINIO_PERMITIDO = '@svalero.com'
+
   const handleSubmit = async () => {
     setLoading(true); setError(''); setSuccess('')
+
+    if (!email.toLowerCase().endsWith(DOMINIO_PERMITIDO)) {
+      setError('Solo pueden acceder usuarios con email @svalero.com')
+      setLoading(false)
+      return
+    }
+
     try {
       if (isRegister) {
         const { error } = await supabase.auth.signUp({ email, password })
@@ -57,8 +66,9 @@ export default function Login() {
           <div>
             <label className="block text-sm font-medium text-slate-600 mb-1">Email</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-              placeholder="tu@email.com"
+              placeholder="tu@svalero.com"
               className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100" />
+            <p className="text-xs text-slate-400 mt-1">Solo emails @svalero.com</p>
           </div>
 
           <div>
