@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/api/supabaseClient'
-import { Wind, Play, RotateCcw, Save } from 'lucide-react'
+import { Wind, Play, RotateCcw, Save, Mic } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 const EXERCISES = [
   {
@@ -46,6 +47,7 @@ const EXERCISES = [
 ]
 
 export default function Respiracion() {
+  const navigate = useNavigate()
   const [selected, setSelected] = useState(null)
   const [state, setState] = useState('idle') // idle, running, done
   const [phaseIdx, setPhaseIdx] = useState(0)
@@ -233,20 +235,31 @@ export default function Respiracion() {
       <div className="space-y-4">
         {EXERCISES.map((ex, i) => (
           <motion.div key={ex.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
-            <button onClick={() => startExercise(ex.id)} className="w-full text-left">
-              <div className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all border border-blue-50">
-                <div className="flex items-center gap-4">
-                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${ex.color} flex items-center justify-center text-2xl flex-shrink-0`}>
-                    {ex.emoji}
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-800">{ex.name}</p>
-                    <p className="text-sm text-slate-500">{ex.desc}</p>
-                    <p className="text-xs text-blue-400 mt-1">{ex.cycles} ciclos · {ex.phases.map(p => p.seconds).join('-')} seg</p>
-                  </div>
+            <div className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all border border-blue-50">
+              <div className="flex items-center gap-4 mb-3">
+                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${ex.color} flex items-center justify-center text-2xl flex-shrink-0`}>
+                  {ex.emoji}
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-slate-800">{ex.name}</p>
+                  <p className="text-sm text-slate-500">{ex.desc}</p>
+                  <p className="text-xs text-blue-400 mt-1">{ex.cycles} ciclos · {ex.phases.map(p => p.seconds).join('-')} seg</p>
                 </div>
               </div>
-            </button>
+              <div className="flex gap-2">
+                <button onClick={() => startExercise(ex.id)}
+                  className={`flex-1 py-2 rounded-xl text-white text-sm font-bold bg-gradient-to-r ${ex.color}`}>
+                  Iniciar
+                </button>
+                {ex.id === 'box' && (
+                  <button onClick={() => navigate('/respiracion/cuadrada')}
+                    className="flex-1 py-2 rounded-xl text-white text-sm font-bold flex items-center justify-center gap-1"
+                    style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}>
+                    <Mic className="w-3 h-3" /> Con voz
+                  </button>
+                )}
+              </div>
+            </div>
           </motion.div>
         ))}
       </div>

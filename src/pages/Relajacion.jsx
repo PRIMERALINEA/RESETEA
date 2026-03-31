@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/api/supabaseClient'
-import { Heart, ChevronRight, CheckCircle } from 'lucide-react'
+import { Heart, ChevronRight, CheckCircle, Mic } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 const GROUPS = [
   { id: 'manos', name: 'Manos y brazos', emoji: '🤜', instruction: 'Aprieta los puños con fuerza durante 7 segundos... ahora suelta y nota la diferencia durante 20 segundos.', tense: 7, relax: 20 },
@@ -12,6 +13,7 @@ const GROUPS = [
 ]
 
 export default function Relajacion() {
+  const navigate = useNavigate()
   const [started, setStarted] = useState(false)
   const [groupIdx, setGroupIdx] = useState(0)
   const [phase, setPhase] = useState('tense') // tense | relax
@@ -117,10 +119,17 @@ export default function Relajacion() {
           <p className="text-xs text-slate-400 mt-4">Duración total: ~{Math.round(GROUPS.reduce((a, g) => a + g.tense + g.relax, 0) / 60)} minutos</p>
         </div>
 
-        <button onClick={start}
-          className="w-full py-4 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-600 text-white font-bold text-lg shadow-lg hover:opacity-90 transition-opacity">
-          Comenzar sesión
-        </button>
+        <div className="flex flex-col gap-3">
+          <button onClick={start}
+            className="w-full py-4 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-600 text-white font-bold text-lg shadow-lg hover:opacity-90 transition-opacity">
+            Comenzar sin voz
+          </button>
+          <button onClick={() => navigate('/relajacion/jacobson')}
+            className="w-full py-4 rounded-2xl text-white font-bold text-lg shadow-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+            style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}>
+            <Mic className="w-5 h-5" /> Con voz guiada
+          </button>
+        </div>
       </div>
     )
   }
