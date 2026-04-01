@@ -137,12 +137,14 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
   const [quincenales, setQuincenales] = useState([])
   const [prepost, setPrepost] = useState([])
   const [riesgo, setRiesgo] = useState([])
+  const [cursos, setCursos] = useState([])
+  const [riesgoCurso, setRiesgoCurso] = useState([])
   const [lastUpdate, setLastUpdate] = useState(null)
 
   const cargar = async () => {
     setLoading(true)
     try {
-      const [r1, r2, r3, r4, r5, r6, r7] = await Promise.all([
+      const [r1, r2, r3, r4, r5, r6, r7, r8, r9] = await Promise.all([
         supabase.rpc('get_orientador_metricas_generales'),
         supabase.rpc('get_orientador_uso_herramientas'),
         supabase.rpc('get_orientador_evolucion_semanal'),
@@ -150,6 +152,8 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
         supabase.rpc('get_orientador_quincenales_grupo'),
         supabase.rpc('get_orientador_prepost_ejercicios'),
         supabase.rpc('get_orientador_alumnos_riesgo'),
+        supabase.rpc('get_orientador_datos_por_curso'),
+        supabase.rpc('get_orientador_riesgo_por_curso'),
       ])
       if (r1.data) setMetricas(r1.data)
       if (r2.data) setHerramientas(r2.data)
@@ -158,6 +162,8 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
       if (r5.data) setQuincenales(r5.data)
       if (r6.data) setPrepost(r6.data)
       if (r7.data) setRiesgo(r7.data)
+      if (r8.data) setCursos(r8.data)
+      if (r9.data) setRiesgoCurso(r9.data)
       setLastUpdate(new Date())
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
@@ -167,7 +173,8 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
 
   const TABS = [
     { id: 'resumen',     label: 'Resumen',    icon: BarChart2 },
-    { id: 'herramientas', label: 'Uso',        icon: Activity },
+    { id: 'cursos',      label: 'Cursos',     icon: BookOpen },
+    { id: 'herramientas', label: 'Uso',       icon: Activity },
     { id: 'ansiedad',    label: 'Ansiedad',   icon: Brain },
     { id: 'quincenales', label: 'Quincenal',  icon: Calendar },
     { id: 'riesgo',      label: 'Atención',   icon: AlertTriangle },
@@ -236,7 +243,88 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
       ) : (
         <AnimatePresence mode="wait">
 
-          {/* ── RESUMEN ── */}
+          {/* ── CURSOS ── */}
+          {tab === 'cursos' && (
+            <motion.div key="cursos" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+              className="space-y-4">
+              {cursos.length === 0 ? (
+                <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-slate-100">
+                  <p className="text-4xl mb-2">📚</p>
+                  <p className="font-bold text-slate-700">Sin datos de cursos aún</p>
+                  <p className="text-slate-400 text-sm mt-1">Los alumnos deben registrarse indicando su curso</p>
+                </div>
+              ) : (
+                cursos.map((c, i) => {
+                  const ansiedadColor = !c.ansiedad_media ? '#64748b' : c.ansiedad_media <= 4 ? '#16a34a' : c.ansiedad_media <= 9 ? '#ca8a04' : '#dc2626'
+                  const riesgos = riesgoCurso.filter(r => r.curso === c.curso)
+                  return (
+                    <motion.div key={c.curso} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
+                      className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <p className="font-black text-slate-800 text-lg">{c.curso}</p>
+                          <p className="text-slate-400 text-xs">{c.total_alumnos} alumno{c.total_alumnos !== 1 ? 's' : ''} registrados</p>
+                        </div>
+                        {riesgos.length > 0 && (
+                          <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-lg">
+                            ⚠️ {riesgos.length} en atención
+                          </span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-3 mb-3">
+                        <div className="bg-slate-50 rounded-xl p-3 text-center">
+                          <p className="font-black text-slate-800 text-lg">{c.alumnos_activos_semana}</p>
+                          <p className="text-slate-400 text-xs">Activos semana</p>
+                        </div>
+                        <div className="bg-slate-50 rounded-xl p-3 text-center">
+                          <p className="font-black text-slate-800 text-lg">{c.total_actividades}</p>
+                          <p className="text-slate-400 text-xs">Actividades</p>
+                        </div>
+                        <div className="bg-slate-50 rounded-xl p-3 text-center">
+                          <p className="font-black text-lg" style={{ color: ansiedadColor }}>
+                            {c.ansiedad_media ?? '—'}
+                          </p>
+                          <p className="text-slate-400 text-xs">Ansiedad media</p>
+                        </div>
+                      </div>
+                      {(c.bienestar_medio || c.rumiacion_media) && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="flex items-center gap-2 bg-green-50 rounded-xl p-2">
+                            <span className="text-sm">✨</span>
+                            <div>
+                              <p className="font-black text-green-700 text-sm">{c.bienestar_medio}</p>
+                              <p className="text-green-600 text-xs">Bienestar</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 bg-violet-50 rounded-xl p-2">
+                            <span className="text-sm">🔄</span>
+                            <div>
+                              <p className="font-black text-violet-700 text-sm">{c.rumiacion_media}</p>
+                              <p className="text-violet-600 text-xs">Rumiación</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {riesgos.length > 0 && (
+                        <div className="mt-3 space-y-1">
+                          <p className="text-xs font-bold text-slate-500">Alumnos que necesitan atención:</p>
+                          {riesgos.map((r, j) => (
+                            <div key={j} className="flex items-center gap-2 bg-red-50 rounded-lg p-2">
+                              <span className="text-xs">{r.ultimo_test >= 15 ? '🔴' : r.ultimo_test >= 10 ? '🟠' : '🟡'}</span>
+                              <p className="text-xs text-red-700 flex-1">{r.motivo}</p>
+                              <p className="text-xs font-mono text-slate-400">{r.alumno_hash.slice(0,6)}...</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </motion.div>
+                  )
+                })
+              )}
+            </motion.div>
+          )}
+
+          {/* ── RESUMEN ── */}}
           {tab === 'resumen' && (
             <motion.div key="resumen" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
               className="space-y-5">
