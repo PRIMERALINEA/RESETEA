@@ -1,9 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/lib/AuthContext'
 import { motion } from 'framer-motion'
 import { Wind, Anchor, Heart, BookOpen, Brain, ChevronRight, Sparkles, ClipboardList } from 'lucide-react'
-import { useState as useStateHome, useEffect as useEffectHome } from 'react'
 import { supabase } from '@/api/supabaseClient'
 import EvaluacionQuincenal from '@/components/EvaluacionQuincenal'
 
