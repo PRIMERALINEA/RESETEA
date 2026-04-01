@@ -127,7 +127,7 @@ function KpiCard({ icon: Icon, label, value, sub, color, delay }) {
 }
 
 // ── PANEL PRINCIPAL ───────────────────────────────────────────
-function PanelOrientador({ orientador, onSalir }) {
+function PanelOrientadorDashboard({ orientador, onSalir }) {
   const [tab, setTab] = useState('resumen')
   const [loading, setLoading] = useState(true)
   const [metricas, setMetricas] = useState(null)
@@ -562,6 +562,6 @@ export default function PanelOrientador() {
   const [orientador, setOrientador] = useState(null)
 
   return orientador
-    ? <PanelOrientador orientador={orientador} onSalir={() => setOrientador(null)} />
+    ? <PanelOrientadorDashboard orientador={orientador} onSalir={() => setOrientador(null)} />
     : <LoginOrientador onAcceso={setOrientador} />
 }
