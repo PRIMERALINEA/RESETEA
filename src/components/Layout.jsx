@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/AuthContext'
-import { Wind, Anchor, BookOpen, Heart, Brain, Home, LogOut, Menu, X, ChevronDown, ChevronRight, Zap, AlertCircle, Sun, User, BarChart2 } from 'lucide-react'
+import { Wind, Anchor, BookOpen, Heart, Brain, Home, LogOut, Menu, X, ChevronDown, ChevronRight, Zap, AlertCircle, Sun, User, BarChart2, Shield } from 'lucide-react'
 
 const navGroups = [
   {
@@ -149,6 +149,16 @@ export default function Layout({ children, currentPageName }) {
               <div>
                 <p className="font-semibold text-sm">Mi Perfil</p>
                 <p className="text-xs opacity-60">Actividades y logros</p>
+              </div>
+            </Link>
+            <Link to="/orientador" onClick={() => setSidebarOpen(false)}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all mb-2 ${
+                isActive('/orientador') ? 'bg-teal-600 text-white shadow-md' : 'text-white/60 hover:bg-white/8 hover:text-white'
+              }`}>
+              <Shield className="w-5 h-5 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-sm">Panel Orientador</p>
+                <p className="text-xs opacity-60">Acceso con código</p>
               </div>
             </Link>
             <Link to="/admin" onClick={() => setSidebarOpen(false)}
