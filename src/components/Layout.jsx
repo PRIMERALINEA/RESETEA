@@ -50,6 +50,7 @@ const navGroups = [
     borderColor: 'border-indigo-500/30',
     items: [
       { name: 'Ansiedad y exámenes', sub: '4 sesiones · Psicoeducación', path: '/ansiedad-examenes', icon: Brain },
+      { name: 'Cuando me quedo en blanco', sub: 'Protocolo + simulación', path: '/quedo-en-blanco', icon: Brain },
     ]
   },
   {
