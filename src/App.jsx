@@ -19,6 +19,7 @@ import MiPerfil from '@/pages/MiPerfil'
 import AdminDashboard from '@/pages/AdminDashboard'
 import AnsiedadExamenes from '@/pages/AnsiedadExamenes'
 import QuedoEnBlanco from '@/pages/QuedoEnBlanco'
+import SOSExamen from '@/pages/SOSExamen'
 import Layout from '@/components/Layout'
 
 function ProtectedRoute({ children }) {
@@ -56,6 +57,7 @@ export default function App() {
       <Route path="/admin" element={<PL><AdminDashboard /></PL>} />
       <Route path="/ansiedad-examenes" element={<PL><AnsiedadExamenes /></PL>} />
       <Route path="/quedo-en-blanco" element={<PL><QuedoEnBlanco /></PL>} />
+      <Route path="/sos-examen" element={<PL><SOSExamen /></PL>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

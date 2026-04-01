@@ -49,6 +49,7 @@ const navGroups = [
     color: 'text-indigo-400',
     borderColor: 'border-indigo-500/30',
     items: [
+      { name: '🚨 SOS Examen', sub: '9 técnicas · Voz guiada', path: '/sos-examen', icon: Zap },
       { name: 'Ansiedad y exámenes', sub: '4 sesiones · Psicoeducación', path: '/ansiedad-examenes', icon: Brain },
       { name: 'Cuando me quedo en blanco', sub: 'Protocolo + simulación', path: '/quedo-en-blanco', icon: Brain },
     ]
