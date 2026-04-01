@@ -44,6 +44,15 @@ const navGroups = [
     ]
   },
   {
+    label: '📖 MÓDULOS',
+    subtitle: 'Aprende a gestionar la ansiedad',
+    color: 'text-indigo-400',
+    borderColor: 'border-indigo-500/30',
+    items: [
+      { name: 'Ansiedad y exámenes', sub: '4 sesiones · Psicoeducación', path: '/ansiedad-examenes', icon: Brain },
+    ]
+  },
+  {
     label: '☀️ RUTINAS',
     subtitle: 'Hábitos que marcan la diferencia',
     color: 'text-amber-400',

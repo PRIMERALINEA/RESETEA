@@ -17,6 +17,7 @@ import EscaleraCalmado from '@/pages/EscaleraCalmado'
 import Grounding54321 from '@/pages/Grounding54321'
 import MiPerfil from '@/pages/MiPerfil'
 import AdminDashboard from '@/pages/AdminDashboard'
+import AnsiedadExamenes from '@/pages/AnsiedadExamenes'
 import Layout from '@/components/Layout'
 
 function ProtectedRoute({ children }) {
@@ -52,6 +53,7 @@ export default function App() {
       <Route path="/grounding" element={<P><Grounding54321 /></P>} />
       <Route path="/perfil" element={<PL><MiPerfil /></PL>} />
       <Route path="/admin" element={<PL><AdminDashboard /></PL>} />
+      <Route path="/ansiedad-examenes" element={<PL><AnsiedadExamenes /></PL>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
