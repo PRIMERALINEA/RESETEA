@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/api/supabaseClient'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Play, Volume2, VolumeX, CheckCircle } from 'lucide-react'
+import EvaluacionPrePost from '@/components/EvaluacionPrePost'
 
 const VOICE_ID = 'RgXx32WYOGrd7gFNifSf'
 const XI_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY
