@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '@/api/supabaseClient'
 import { motion } from 'framer-motion'
-import { User, Wind, Anchor, Heart, BookOpen, Brain, Zap, TrendingUp, Calendar, Award, ChevronDown, ChevronUp } from 'lucide-react'
+import { User, Wind, Anchor, Heart, BookOpen, Brain, Zap, TrendingUp, Calendar, Award, ChevronDown, ChevronUp, Share2, FileText, Copy, Check } from 'lucide-react'
 
 const LOGO_URL = 'https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/Gemini_Generated_Image_rar33drar33drar3.png'
 
@@ -45,6 +45,9 @@ function StatCard({ icon: Icon, label, value, color, delay }) {
 export default function MiPerfil() {
   const [periodoIdx, setPeriodoIdx] = useState(0)
   const [showAll, setShowAll] = useState(false)
+  const [mostrarResumen, setMostrarResumen] = useState(false)
+  const [copiado, setCopiado] = useState(false)
+  const [diario, setDiario] = useState([])
   const [loading, setLoading] = useState(true)
   const [userEmail, setUserEmail] = useState('')
   const [datos, setDatos] = useState({
@@ -65,6 +68,10 @@ export default function MiPerfil() {
       if (!user) { setLoading(false); return }
       setUserEmail(user.email || '')
       const uid = user.id
+      // Cargar diario completo
+      const { data: dDiario } = await supabase.from('diario_completo')
+        .select('*').eq('user_id', uid).order('fecha_entrada', { ascending: false }).limit(30)
+      if (dDiario) setDiario(dDiario)
       const [r1, r2, r3, r4, r5, r6] = await Promise.all([
         supabase.from('sesiones_respiracion').select('*').eq('user_id', uid).order('created_at', { ascending: false }),
         supabase.from('sesiones_anclaje').select('*').eq('user_id', uid).order('created_at', { ascending: false }),
@@ -125,6 +132,95 @@ export default function MiPerfil() {
     { emoji: '💆', label: 'Cuerpo relajado',     conseguido: datos.relajacion.length >= 2 },
     { emoji: '🗺️', label: 'Explorador',          conseguido: [datos.respiracion, datos.anclajes, datos.relajacion, datos.diario].filter(a => a.length > 0).length >= 4 },
   ]
+
+  const generarTextoResumen = () => {
+    const periodo = PERIODOS[periodoIdx].label
+    const fechaHoy = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+    const diarFilt = diario.filter(d => new Date(d.fecha_entrada) > diasAtras(PERIODOS[periodoIdx].dias))
+
+    // Emociones más frecuentes del diario
+    const emocionesCount = {}
+    diarFilt.forEach(d => { if (d.emocion_principal) emocionesCount[d.emocion_principal] = (emocionesCount[d.emocion_principal] || 0) + 1 })
+    const topEmociones = Object.entries(emocionesCount).sort((a,b) => b[1]-a[1]).slice(0,3).map(([e]) => e).join(', ')
+
+    // Media de intensidad
+    const intensidades = diarFilt.filter(d => d.intensidad != null).map(d => d.intensidad)
+    const mediaInt = intensidades.length ? (intensidades.reduce((a,b) => a+b, 0) / intensidades.length).toFixed(1) : null
+
+    // Media estrés
+    const estres = diarFilt.filter(d => d.nivel_estres != null).map(d => d.nivel_estres)
+    const mediaEstres = estres.length ? (estres.reduce((a,b) => a+b, 0) / estres.length).toFixed(1) : null
+
+    // Pensamientos más frecuentes
+    const pensamientosAll = diarFilt.flatMap(d => d.pensamientos || [])
+    const topPens = [...new Set(pensamientosAll)].slice(0,3).join(', ')
+
+    // Estrategias
+    const estrategiasAll = diarFilt.flatMap(d => d.estrategia_usada || [])
+    const estrategiasCount = {}
+    estrategiasAll.forEach(e => { estrategiasCount[e] = (estrategiasCount[e] || 0) + 1 })
+    const topEstr = Object.entries(estrategiasCount).sort((a,b) => b[1]-a[1]).slice(0,2).map(([e]) => e).join(', ')
+
+    // Tests ansiedad
+    const testsF = f(datos.tests)
+    const mediaTest = testsF.length ? (testsF.reduce((a,s) => a + (s.puntuacion||0), 0) / testsF.length).toFixed(1) : null
+
+    let texto = `RESUMEN EMOCIONAL · RESETEA
+Generado el ${fechaHoy}
+Período: ${periodo}
+─────────────────────────────
+
+📊 ACTIVIDAD
+• Sesiones de bienestar: ${totalSesiones}
+• Minutos de práctica: ${totalMinutos}
+• Entradas en el diario: ${rDia.length}
+
+❤️ ESTADO EMOCIONAL
+`
+    if (topEmociones) texto += `• Emociones más frecuentes: ${topEmociones}
+`
+    if (mediaInt) texto += `• Intensidad emocional media: ${mediaInt}/10
+`
+    if (mediaEstres) texto += `• Nivel de estrés medio: ${mediaEstres}/10
+`
+    if (mediaTest) texto += `• Puntuación media GAD-7: ${mediaTest}/21
+`
+
+    if (topPens) {
+      texto += `
+🧠 PENSAMIENTOS RECURRENTES
+• ${topPens}
+`
+    }
+
+    if (topEstr) {
+      texto += `
+🤔 CÓMO GESTIONÉ LAS EMOCIONES
+• ${topEstr}
+`
+    }
+
+    texto += `
+🛠️ HERRAMIENTAS USADAS
+• Respiración: ${rResp.length} veces
+• Anclaje: ${rAnc.length} veces
+• Relajación: ${rRel.length} veces
+• Técnicas rápidas: ${rTec.length} veces
+
+─────────────────────────────
+Este resumen ha sido generado automáticamente por la app Resetea.
+Los datos son personales y confidenciales.`
+
+    return texto
+  }
+
+  const copiarResumen = () => {
+    const texto = generarTextoResumen()
+    navigator.clipboard.writeText(texto).then(() => {
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 3000)
+    })
+  }
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: '#f0f9f9' }}>
