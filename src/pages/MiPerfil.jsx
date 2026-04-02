@@ -274,6 +274,50 @@ Los datos son personales y confidenciales.`
         <StatCard icon={BookOpen}   label="Diario emocional"     value={rDia.length}   color="#7c3aed"  delay={0.35} />
       </div>
 
+      {/* Botón resumen emocional */}
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.42 }}
+        className="mb-4">
+        <button onClick={() => setMostrarResumen(!mostrarResumen)}
+          className="w-full py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2 shadow-md"
+          style={{ background: 'linear-gradient(135deg, #7c3aed, #0d3d3d)' }}>
+          <FileText className="w-5 h-5" />
+          {mostrarResumen ? 'Ocultar resumen' : '📋 Generar resumen para compartir'}
+        </button>
+      </motion.div>
+
+      {mostrarResumen && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Share2 className="w-5 h-5 text-violet-600" />
+              <p className="font-black text-slate-800">Resumen emocional</p>
+            </div>
+            <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-lg">
+              {PERIODOS[periodoIdx].label}
+            </span>
+          </div>
+          <p className="text-slate-500 text-xs mb-4 leading-relaxed">
+            Resumen de tus datos de bienestar. Puedes copiarlo y compartirlo con tu orientador, tutor o psicólogo.
+          </p>
+          <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 mb-4 overflow-auto max-h-64">
+            <pre className="text-xs text-slate-600 whitespace-pre-wrap font-mono leading-relaxed">
+              {generarTextoResumen()}
+            </pre>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={copiarResumen}
+              className="flex-1 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
+              style={{ background: copiado ? '#dcfce7' : 'linear-gradient(135deg, #7c3aed, #0d3d3d)', color: copiado ? '#16a34a' : 'white' }}>
+              {copiado ? <><Check className="w-4 h-4" /> Copiado</> : <><Copy className="w-4 h-4" /> Copiar al portapapeles</>}
+            </button>
+          </div>
+          <p className="text-xs text-slate-400 mt-3 text-center">
+            🔒 Solo tú decides con quién compartes este resumen
+          </p>
+        </motion.div>
+      )}
+
       {/* Logros */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
         className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 mb-6">
