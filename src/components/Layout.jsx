@@ -61,6 +61,7 @@ const navGroups = [
     borderColor: 'border-amber-500/30',
     items: [
       { name: 'Rutinas diarias', sub: 'Mañana, examen, noche', path: '/rutinas', icon: Sun },
+      { name: 'Bienestar general', sub: 'Hábitos, retos y plan', path: '/bienestar', icon: Heart },
     ]
   },
   {
