@@ -453,70 +453,260 @@ function RetosAutocuidado() {
 
 // ── PESTAÑA PLAN ANTIESTRES ───────────────────────────────────
 function PlanAntistres() {
-  const [diaActivo, setDiaActivo] = useState(0)
-  const dia = PLAN_DIAS[diaActivo]
+  const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+  const TIPOS = [
+    { id: 'estudio',  label: 'Estudio',        color: '#1d4ed8', bg: '#dbeafe',  emoji: '📖' },
+    { id: 'pausa',    label: 'Pausa activa',    color: '#16a34a', bg: '#dcfce7',  emoji: '🏃' },
+    { id: 'descanso', label: 'Descanso',        color: '#7c3aed', bg: '#ede9fe',  emoji: '☕' },
+    { id: 'repaso',   label: 'Repaso',          color: '#0891b2', bg: '#cffafe',  emoji: '🔄' },
+    { id: 'libre',    label: 'Tiempo libre',    color: '#b45309', bg: '#fef3c7',  emoji: '🎯' },
+  ]
+
+  const HORAS = Array.from({ length: 18 }, (_, i) => {
+    const h = i + 7
+    return `${String(h).padStart(2, '0')}:00`
+  })
+
+  const planVacio = () => DIAS.reduce((acc, dia) => ({ ...acc, [dia]: [] }), {})
+
+  const [diaActivo, setDiaActivo] = useState('Lunes')
+  const [plan, setPlan] = useState(planVacio)
+  const [guardado, setGuardado] = useState(false)
+  const [nuevoBloque, setNuevoBloque] = useState({ hora: '17:00', duracion: 30, actividad: '', tipo: 'estudio' })
+  const [añadiendo, setAñadiendo] = useState(false)
+
+  useEffect(() => { cargarPlan() }, [])
+
+  const cargarPlan = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase.from('plan_estudio')
+        .select('plan_json').eq('user_id', user.id).single()
+      if (data?.plan_json) setPlan(data.plan_json)
+    } catch {}
+  }
+
+  const guardarPlan = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      await supabase.from('plan_estudio').upsert(
+        { user_id: user.id, plan_json: plan },
+        { onConflict: 'user_id' }
+      )
+      setGuardado(true)
+      setTimeout(() => setGuardado(false), 2000)
+    } catch (e) { console.error(e) }
+  }
+
+  const añadirBloque = () => {
+    if (!nuevoBloque.actividad.trim()) return
+    const bloqueCompleto = { ...nuevoBloque, id: Date.now() }
+    setPlan(prev => ({
+      ...prev,
+      [diaActivo]: [...(prev[diaActivo] || []), bloqueCompleto]
+        .sort((a, b) => a.hora.localeCompare(b.hora))
+    }))
+    setNuevoBloque({ hora: '17:00', duracion: 30, actividad: '', tipo: 'estudio' })
+    setAñadiendo(false)
+  }
+
+  const eliminarBloque = (id) => {
+    setPlan(prev => ({
+      ...prev,
+      [diaActivo]: prev[diaActivo].filter(b => b.id !== id)
+    }))
+  }
+
+  const copiarDia = (diaOrigen) => {
+    setPlan(prev => ({
+      ...prev,
+      [diaActivo]: [...(prev[diaOrigen] || [])]
+    }))
+  }
+
+  const bloquesHoy = plan[diaActivo] || []
+  const minutosEstudio = bloquesHoy.filter(b => b.tipo === 'estudio' || b.tipo === 'repaso').reduce((a, b) => a + (b.duracion || 0), 0)
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="bg-teal-50 rounded-2xl p-4 border border-teal-100">
-        <p className="font-bold text-teal-800 text-sm mb-1">📚 Plan de estudio antiestrés</p>
+        <p className="font-bold text-teal-800 text-sm mb-1">📚 Mi plan de estudio</p>
         <p className="text-teal-600 text-xs leading-relaxed">
-          Bloques de 25-30 min con pausas activas. Empieza por lo más difícil cuando estés más despejado/a.
+          Organiza cada día a tu manera. Añade bloques de estudio, pausas y tiempo libre.
         </p>
       </div>
 
       {/* Selector de día */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1">
-        {PLAN_DIAS.map((d, i) => (
-          <button key={d.dia} onClick={() => setDiaActivo(i)}
-            className="flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold transition-all"
-            style={{
-              background: diaActivo === i ? 'linear-gradient(135deg, #0d3d3d, #0f6b6b)' : 'white',
-              color: diaActivo === i ? 'white' : '#64748b',
-              border: diaActivo === i ? 'none' : '1px solid #e2e8f0'
-            }}>
-            {d.dia}
-          </button>
-        ))}
+      <div className="flex gap-1 overflow-x-auto pb-1">
+        {DIAS.map(dia => {
+          const tiene = (plan[dia] || []).length > 0
+          return (
+            <button key={dia} onClick={() => setDiaActivo(dia)}
+              className="flex-shrink-0 px-2.5 py-2 rounded-xl text-xs font-bold transition-all relative"
+              style={{
+                background: diaActivo === dia ? 'linear-gradient(135deg, #0d3d3d, #0f6b6b)' : 'white',
+                color: diaActivo === dia ? 'white' : '#64748b',
+                border: diaActivo === dia ? 'none' : '1px solid #e2e8f0'
+              }}>
+              {dia.slice(0, 3)}
+              {tiene && diaActivo !== dia && (
+                <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-teal-500" />
+              )}
+            </button>
+          )
+        })}
       </div>
 
-      {/* Plan del día */}
+      {/* Resumen del día */}
+      {bloquesHoy.length > 0 && (
+        <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-2">
+          <span className="text-xs text-slate-500">{bloquesHoy.length} bloques</span>
+          <span className="text-xs text-blue-600 font-bold">📖 {minutosEstudio} min estudio</span>
+        </div>
+      )}
+
+      {/* Bloques del día */}
       <AnimatePresence mode="wait">
-        <motion.div key={diaActivo} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}
-          className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-          <p className="font-black text-slate-800 text-lg mb-4">{dia.emoji} {dia.dia}</p>
-          <div className="space-y-2">
-            {dia.bloques.map((bloque, i) => {
-              const cfg = BLOQUE_COLOR[bloque.tipo] || BLOQUE_COLOR.estudio
+        <motion.div key={diaActivo} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }}
+          className="space-y-2">
+          {bloquesHoy.length === 0 ? (
+            <div className="bg-white rounded-2xl p-6 text-center border border-dashed border-slate-200">
+              <p className="text-3xl mb-2">📅</p>
+              <p className="text-slate-500 text-sm">Sin bloques para {diaActivo}</p>
+              <p className="text-slate-400 text-xs mt-1">Pulsa "Añadir bloque" para empezar</p>
+            </div>
+          ) : (
+            bloquesHoy.map(bloque => {
+              const tipo = TIPOS.find(t => t.id === bloque.tipo) || TIPOS[0]
               return (
-                <div key={i} className="flex items-start gap-3 p-3 rounded-xl"
-                  style={{ background: cfg.bg }}>
-                  <span className="text-lg flex-shrink-0">{cfg.emoji}</span>
+                <motion.div key={bloque.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-3 p-3 rounded-xl"
+                  style={{ background: tipo.bg }}>
+                  <span className="text-lg flex-shrink-0">{tipo.emoji}</span>
                   <div className="flex-1">
-                    <p className="font-bold text-sm" style={{ color: cfg.color }}>{bloque.hora}</p>
-                    <p className="text-sm text-slate-700">{bloque.actividad}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-xs" style={{ color: tipo.color }}>{bloque.hora} · {bloque.duracion} min</p>
+                    </div>
+                    <p className="text-sm text-slate-700 font-medium">{bloque.actividad}</p>
                   </div>
-                </div>
+                  <button onClick={() => eliminarBloque(bloque.id)}
+                    className="text-slate-300 hover:text-red-400 transition-colors text-lg leading-none flex-shrink-0">×</button>
+                </motion.div>
               )
-            })}
-          </div>
+            })
+          )}
         </motion.div>
       </AnimatePresence>
 
-      {/* Reglas de oro */}
+      {/* Formulario añadir bloque */}
+      {añadiendo ? (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl p-4 border-2 border-teal-200 shadow-sm space-y-3">
+          <p className="font-bold text-slate-700 text-sm">Nuevo bloque — {diaActivo}</p>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Hora de inicio</label>
+              <select value={nuevoBloque.hora} onChange={e => setNuevoBloque(p => ({ ...p, hora: e.target.value }))}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-teal-400">
+                {HORAS.map(h => <option key={h} value={h}>{h}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Duración</label>
+              <select value={nuevoBloque.duracion} onChange={e => setNuevoBloque(p => ({ ...p, duracion: Number(e.target.value) }))}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-teal-400">
+                {[15, 25, 30, 45, 60, 90].map(m => <option key={m} value={m}>{m} min</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Tipo</label>
+            <div className="flex flex-wrap gap-1.5">
+              {TIPOS.map(t => (
+                <button key={t.id} onClick={() => setNuevoBloque(p => ({ ...p, tipo: t.id }))}
+                  className="px-2.5 py-1.5 rounded-xl text-xs font-bold border-2 transition-all"
+                  style={{
+                    background: nuevoBloque.tipo === t.id ? t.bg : 'white',
+                    borderColor: nuevoBloque.tipo === t.id ? t.color : '#e2e8f0',
+                    color: nuevoBloque.tipo === t.id ? t.color : '#64748b'
+                  }}>
+                  {t.emoji} {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">¿Qué vas a hacer?</label>
+            <input value={nuevoBloque.actividad} onChange={e => setNuevoBloque(p => ({ ...p, actividad: e.target.value }))}
+              onKeyDown={e => e.key === 'Enter' && añadirBloque()}
+              placeholder="Ej: Matemáticas tema 5, Inglés vocabulario..."
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+          </div>
+
+          <div className="flex gap-2">
+            <button onClick={() => setAñadiendo(false)}
+              className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 text-sm font-medium">
+              Cancelar
+            </button>
+            <button onClick={añadirBloque} disabled={!nuevoBloque.actividad.trim()}
+              className="flex-1 py-2.5 rounded-xl text-white text-sm font-bold disabled:opacity-40"
+              style={{ background: 'linear-gradient(135deg, #0d3d3d, #0f6b6b)' }}>
+              Añadir
+            </button>
+          </div>
+        </motion.div>
+      ) : (
+        <div className="flex gap-2">
+          <button onClick={() => setAñadiendo(true)}
+            className="flex-1 py-3 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2"
+            style={{ background: 'linear-gradient(135deg, #0d3d3d, #0f6b6b)' }}>
+            <Plus className="w-4 h-4" /> Añadir bloque
+          </button>
+          <button onClick={guardarPlan}
+            className="px-4 py-3 rounded-2xl font-bold text-sm transition-all flex items-center gap-1"
+            style={{ background: guardado ? '#dcfce7' : '#f0fdf4', color: guardado ? '#16a34a' : '#0f6b6b', border: '1px solid #bbf7d0' }}>
+            {guardado ? '✓ Guardado' : '💾 Guardar'}
+          </button>
+        </div>
+      )}
+
+      {/* Copiar de otro día */}
+      {bloquesHoy.length === 0 && DIAS.some(d => d !== diaActivo && (plan[d] || []).length > 0) && (
+        <div className="bg-white rounded-2xl p-4 border border-slate-100">
+          <p className="text-xs font-bold text-slate-500 mb-2">Copiar plan de otro día:</p>
+          <div className="flex flex-wrap gap-2">
+            {DIAS.filter(d => d !== diaActivo && (plan[d] || []).length > 0).map(d => (
+              <button key={d} onClick={() => copiarDia(d)}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100 transition-all">
+                Copiar {d}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tips de recuperación activa */}
       <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-        <p className="font-black text-slate-800 mb-3">💡 Reglas de oro</p>
+        <p className="font-black text-slate-800 mb-4">💡 Tips de descanso y recuperación activa</p>
         {[
-          { e: '⏱️', t: 'Bloques de 25-30 min', d: 'El cerebro aguanta 25-30 min de concentración máxima' },
-          { e: '📵', t: 'Móvil en silencio', d: 'Una notificación rompe 20 min de concentración' },
-          { e: '💧', t: 'Agua y snack sano', d: 'El cerebro necesita glucosa e hidratación para funcionar' },
-          { e: '🌙', t: 'Para antes de las 22h', d: 'El aprendizaje se consolida durmiendo, no estudiando de noche' },
+          { e: '⏱️', t: 'Bloques de 25-30 min', d: 'El cerebro aguanta 25-30 min de concentración máxima. Descansar activa la memoria.' },
+          { e: '🏃', t: 'Pausa activa, no pasiva', d: 'Levántate, estira o camina en el descanso. El móvil no descansa tu cerebro.' },
+          { e: '💧', t: 'Agua y snack sano', d: 'El cerebro necesita glucosa e hidratación para funcionar al máximo.' },
+          { e: '📵', t: 'Móvil en silencio', d: 'Una notificación rompe 20 min de concentración. Ponlo boca abajo.' },
+          { e: '🌙', t: 'Para antes de las 22h', d: 'El aprendizaje se consolida durmiendo, no estudiando de noche.' },
+          { e: '🌅', t: '3 min de respiración al despertar', d: 'Antes de mirar el móvil, respira. Activa el modo calma para el día.' },
         ].map(({ e, t, d }) => (
           <div key={t} className="flex items-start gap-3 mb-3 last:mb-0">
             <span className="text-xl flex-shrink-0">{e}</span>
             <div>
               <p className="font-bold text-slate-800 text-sm">{t}</p>
-              <p className="text-slate-500 text-xs">{d}</p>
+              <p className="text-slate-500 text-xs leading-relaxed">{d}</p>
             </div>
           </div>
         ))}
@@ -524,6 +714,7 @@ function PlanAntistres() {
     </div>
   )
 }
+
 
 // ── PESTAÑA PROGRESO ──────────────────────────────────────────
 function Progreso() {
