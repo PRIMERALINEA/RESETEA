@@ -24,6 +24,7 @@ import PanelOrientador from '@/pages/PanelOrientador'
 import Bienestar from '@/pages/Bienestar'
 import ModuloFamilias from '@/pages/ModuloFamilias'
 import Layout from '@/components/Layout'
+import { RgpdBanner, useRgpdConsent, PoliticaPrivacidad } from '@/components/RgpdBanner'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -40,8 +41,12 @@ const P = ({ children }) => <ProtectedRoute>{children}</ProtectedRoute>
 const PL = ({ children }) => <ProtectedRoute><Layout>{children}</Layout></ProtectedRoute>
 
 export default function App() {
+  const { consentDado, darConsent } = useRgpdConsent()
+
   return (
-    <Routes>
+    <>
+      {!consentDado && <RgpdBanner onAceptar={darConsent} />}
+      <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<PL><Home /></PL>} />
       <Route path="/respiracion" element={<PL><Respiracion /></PL>} />
@@ -64,7 +69,9 @@ export default function App() {
       <Route path="/orientador" element={<PanelOrientador />} />
       <Route path="/bienestar" element={<PL><Bienestar /></PL>} />
       <Route path="/familias" element={<PL><ModuloFamilias /></PL>} />
+      <Route path="/privacidad" element={<PoliticaPrivacidad />} />
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </>
   )
 }
