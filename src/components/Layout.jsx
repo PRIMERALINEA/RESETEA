@@ -62,6 +62,7 @@ const navGroups = [
     items: [
       { name: 'Rutinas diarias', sub: 'Mañana, examen, noche', path: '/rutinas', icon: Sun },
       { name: 'Bienestar general', sub: 'Hábitos, retos y plan', path: '/bienestar', icon: Heart },
+      { name: '❤️ Para familias', sub: 'Guía de acompañamiento', path: '/familias', icon: Heart },
     ]
   },
   {
