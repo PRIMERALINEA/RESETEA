@@ -22,6 +22,7 @@ import QuedoEnBlanco from '@/pages/QuedoEnBlanco'
 import SOSExamen from '@/pages/SOSExamen'
 import PanelOrientador from '@/pages/PanelOrientador'
 import Bienestar from '@/pages/Bienestar'
+import ModuloFamilias from '@/pages/ModuloFamilias'
 import Layout from '@/components/Layout'
 
 function ProtectedRoute({ children }) {
@@ -62,6 +63,7 @@ export default function App() {
       <Route path="/sos-examen" element={<PL><SOSExamen /></PL>} />
       <Route path="/orientador" element={<PanelOrientador />} />
       <Route path="/bienestar" element={<PL><Bienestar /></PL>} />
+      <Route path="/familias" element={<PL><ModuloFamilias /></PL>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
