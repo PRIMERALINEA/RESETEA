@@ -5,9 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, X, ShieldCheck } from 'lucide-react'
 
 const LOGO_URL = 'https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/Gemini_Generated_Image_rar33drar33drar3.png'
-const DOMINIO_PERMITIDO = '@svalero.com'
-
 const CURSOS = [
+  '1º Primaria', '2º Primaria', '3º Primaria',
+  '4º Primaria', '5º Primaria', '6º Primaria',
   '1º ESO', '2º ESO', '3º ESO', '4º ESO',
   '1º Bachillerato', '2º Bachillerato',
   'FP Básica', '1º FP Medio', '2º FP Medio',
@@ -62,8 +62,22 @@ export default function Login() {
   const handleSubmit = async () => {
     setLoading(true); setError(''); setSuccess('')
 
-    if (!email.toLowerCase().endsWith(DOMINIO_PERMITIDO)) {
-      setError('Solo pueden acceder usuarios con email @svalero.com')
+    // Validar dominio dinámicamente contra tabla centros
+    const dominio = email.split('@')[1]
+    if (!dominio) {
+      setError('Introduce un email válido')
+      setLoading(false); return
+    }
+
+    const { data: centroCheck } = await supabase
+      .from('centros')
+      .select('id, nombre')
+      .eq('dominio', dominio)
+      .eq('activo', true)
+      .single()
+
+    if (!centroCheck) {
+      setError('Tu centro educativo no está registrado en Resetea. Contacta con tu orientador/a.')
       setLoading(false); return
     }
 
@@ -92,18 +106,10 @@ export default function Login() {
         if (signUpError) throw signUpError
 
         if (data?.user) {
-          // Detectar centro automáticamente por dominio del email
-          const dominio = email.split('@')[1]
-          const { data: centro } = await supabase
-            .from('centros')
-            .select('id')
-            .eq('dominio', dominio)
-            .single()
-
           await supabase.from('perfiles_alumnos').upsert({
             user_id: data.user.id,
             curso,
-            centro_id: centro?.id || null,
+            centro_id: centroCheck.id,
             acepta_politica: true,
             fecha_aceptacion: new Date().toISOString(),
           }, { onConflict: 'user_id' })
@@ -160,10 +166,10 @@ export default function Login() {
             <label className="block text-sm font-medium text-slate-600 mb-1">Email</label>
             <input
               type="email" value={email} onChange={e => setEmail(e.target.value)}
-              placeholder="tu@svalero.com"
+              placeholder="tu@centro.com"
               className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
             />
-            <p className="text-xs text-slate-400 mt-1">Solo emails @svalero.com</p>
+            <p className="text-xs text-slate-400 mt-1">Usa el email de tu centro educativo</p>
           </div>
 
           {/* Curso (solo registro) */}
