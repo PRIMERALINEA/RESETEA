@@ -4,7 +4,7 @@ import { supabase } from '@/api/supabaseClient'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, X, ShieldCheck } from 'lucide-react'
 
-const LOGO_URL = 'https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/Gemini_Generated_Image_rar33drar33drar3.png'
+const LOGO_URL = 'https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/WhatsApp%20Image%202026-04-06%20at%2015.58.04.jpeg'
 const CURSOS = [
   '1º Primaria', '2º Primaria', '3º Primaria',
   '4º Primaria', '5º Primaria', '6º Primaria',
