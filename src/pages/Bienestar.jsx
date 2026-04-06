@@ -359,8 +359,16 @@ function RetosAutocuidado() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+      // Obtener centro_id del perfil del alumno
+      const { data: perfil } = await supabase
+        .from('perfiles_alumnos')
+        .select('centro_id')
+        .eq('user_id', user.id)
+        .single()
+
       await supabase.from('retos_autocuidado').insert({
-        user_id: user.id, reto_id: reto.id, reto_nombre: reto.nombre
+        user_id: user.id, centro_id: perfil?.centro_id || null,
+        reto_id: reto.id, reto_nombre: reto.nombre
       })
       setCompletados(prev => [...prev, reto.id])
     } catch (e) { console.error(e) }

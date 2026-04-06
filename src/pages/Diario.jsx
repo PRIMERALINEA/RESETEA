@@ -153,8 +153,17 @@ export default function Diario() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+
+      // Obtener centro_id del perfil del alumno
+      const { data: perfil } = await supabase
+        .from('perfiles_alumnos')
+        .select('centro_id')
+        .eq('user_id', user.id)
+        .single()
+
       await supabase.from('diario_completo').insert({
         user_id: user.id,
+        centro_id: perfil?.centro_id || null,
         fecha_entrada: new Date(fecha).toISOString(),
         emocion_principal: emocionPrincipal,
         intensidad,

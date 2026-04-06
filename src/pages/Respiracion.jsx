@@ -9,7 +9,7 @@ const EXERCISES = [
     id: 'box',
     name: 'Respiración Cuadrada',
     desc: 'Técnica 4-4-4-4 para calmar el estrés antes de un examen',
-    emoji: '⬜',
+    emoji: '🌬',
     color: 'from-blue-400 to-cyan-500',
     phases: [
       { label: 'INHALA', seconds: 4, color: '#60a5fa' },
@@ -23,7 +23,7 @@ const EXERCISES = [
     id: '478',
     name: 'Respiración 4-7-8',
     desc: 'Reduce la ansiedad rápidamente',
-    emoji: '🌙',
+    emoji: '🌸',
     color: 'from-purple-400 to-pink-500',
     phases: [
       { label: 'INHALA', seconds: 4, color: '#a78bfa' },
@@ -36,7 +36,7 @@ const EXERCISES = [
     id: 'calma',
     name: 'Respiración Calmante',
     desc: 'Exhala más largo para relajarte',
-    emoji: '☁️',
+    emoji: '🍃',
     color: 'from-teal-400 to-cyan-500',
     phases: [
       { label: 'INHALA', seconds: 4, color: '#2dd4bf' },
@@ -113,9 +113,21 @@ export default function Respiracion() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const duracion = startTimeRef.current ? Math.round((Date.now() - startTimeRef.current) / 1000) : exercise.cycles * exercise.phases.reduce((a, p) => a + p.seconds, 0)
+
+      const duracion = startTimeRef.current
+        ? Math.round((Date.now() - startTimeRef.current) / 1000)
+        : exercise.cycles * exercise.phases.reduce((a, p) => a + p.seconds, 0)
+
+      // Obtener centro_id del perfil del alumno
+      const { data: perfil } = await supabase
+        .from('perfiles_alumnos')
+        .select('centro_id')
+        .eq('user_id', user.id)
+        .single()
+
       await supabase.from('sesiones_respiracion').insert({
         user_id: user.id,
+        centro_id: perfil?.centro_id || null,
         ejercicio_id: exercise.id,
         ejercicio_nombre: exercise.name,
         duracion_segundos: duracion,

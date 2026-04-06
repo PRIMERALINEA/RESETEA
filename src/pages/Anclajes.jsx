@@ -61,8 +61,17 @@ export default function Anclajes() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+
+      // Obtener centro_id del perfil del alumno
+      const { data: perfil } = await supabase
+        .from('perfiles_alumnos')
+        .select('centro_id')
+        .eq('user_id', user.id)
+        .single()
+
       await supabase.from('sesiones_anclaje').insert({
         user_id: user.id,
+        centro_id: perfil?.centro_id || null,
         tecnica_id: technique.id,
         tecnica_nombre: technique.name,
         pasos_completados: technique.steps.length,

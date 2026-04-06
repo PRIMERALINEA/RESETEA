@@ -28,7 +28,7 @@ const getResult = (score) => {
 }
 
 export default function TestEstres() {
-  const [preguntaIdx, setPreguntaIdx] = useState(-1) // -1 = intro
+  const [preguntaIdx, setPreguntaIdx] = useState(-1)
   const [respuestas, setRespuestas] = useState({})
   const [resultado, setResultado] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -51,8 +51,17 @@ export default function TestEstres() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+
+      // Obtener centro_id del perfil del alumno
+      const { data: perfil } = await supabase
+        .from('perfiles_alumnos')
+        .select('centro_id')
+        .eq('user_id', user.id)
+        .single()
+
       await supabase.from('test_estres').insert({
         user_id: user.id,
+        centro_id: perfil?.centro_id || null,
         tipo: 'gad7_adaptado',
         puntuacion: resultado.score,
         nivel: resultado.label,
@@ -71,7 +80,6 @@ export default function TestEstres() {
     setSaved(false)
   }
 
-  // Intro
   if (preguntaIdx === -1) {
     return (
       <div className="max-w-lg mx-auto px-4 py-6">
@@ -101,7 +109,6 @@ export default function TestEstres() {
     )
   }
 
-  // Resultado
   if (resultado) {
     return (
       <div className="max-w-lg mx-auto px-4 py-6">
@@ -138,11 +145,9 @@ export default function TestEstres() {
     )
   }
 
-  // Preguntas
   const progress = ((preguntaIdx + 1) / PREGUNTAS.length) * 100
   return (
     <div className="max-w-lg mx-auto px-4 py-6">
-      {/* Progreso */}
       <div className="mb-6">
         <div className="flex justify-between text-xs text-slate-400 mb-1">
           <span>Pregunta {preguntaIdx + 1} de {PREGUNTAS.length}</span>

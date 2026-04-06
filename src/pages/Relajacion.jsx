@@ -16,7 +16,7 @@ export default function Relajacion() {
   const navigate = useNavigate()
   const [started, setStarted] = useState(false)
   const [groupIdx, setGroupIdx] = useState(0)
-  const [phase, setPhase] = useState('tense') // tense | relax
+  const [phase, setPhase] = useState('tense')
   const [counter, setCounter] = useState(7)
   const [done, setDone] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -69,8 +69,17 @@ export default function Relajacion() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       const duracion = startTimeRef.current ? Math.round((Date.now() - startTimeRef.current) / 1000) : 0
+
+      // Obtener centro_id del perfil del alumno
+      const { data: perfil } = await supabase
+        .from('perfiles_alumnos')
+        .select('centro_id')
+        .eq('user_id', user.id)
+        .single()
+
       await supabase.from('sesiones_relajacion').insert({
         user_id: user.id,
+        centro_id: perfil?.centro_id || null,
         tipo: 'relajacion_muscular_progresiva',
         grupos_completados: GROUPS.length,
         duracion_segundos: duracion,
@@ -158,7 +167,6 @@ export default function Relajacion() {
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-rose-900 to-pink-900">
       <button onClick={reset} className="absolute top-6 left-6 text-white/40 hover:text-white text-sm">← Salir</button>
 
-      {/* Progreso */}
       <div className="flex gap-2 mb-8">
         {GROUPS.map((_, i) => (
           <div key={i} className="w-2 h-2 rounded-full transition-all"
