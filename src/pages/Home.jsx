@@ -150,7 +150,7 @@ export default function Home() {
             { emoji: '🆘', title: 'Kit de emergencia', sub: 'Ayuda inmediata', path: '/kit-emergencia', gradient: 'linear-gradient(135deg, #b91c1c, #dc2626)' },
             { emoji: '🚨', title: 'SOS Examen', sub: '9 técnicas rápidas', path: '/sos-examen', gradient: 'linear-gradient(135deg, #92400e, #b45309)' },
             { emoji: '🌬️', title: 'Respiración', sub: 'Calma al momento', path: '/respiracion', gradient: 'linear-gradient(135deg, #0d9488, #14b8a6)' },
-            { emoji: '⚓', title: 'Anclaje', sub: 'Vuelve al presente', path: '/anclajes', gradient: 'linear-gradient(135deg, #4338ca, #6366f1)' },
+            { emoji: '🪜', title: 'Escalera de calmado', sub: 'Baja la intensidad', path: '/escalera-calmado', gradient: 'linear-gradient(135deg, #4338ca, #6366f1)' },
           ].map((item, i) => (
             <motion.div key={item.path} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.12 + i * 0.05 }}>
@@ -186,37 +186,6 @@ export default function Home() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* ── MÓDULOS ── */}
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-        <p className="text-xs font-black tracking-widest mb-3" style={{ color: '#94a3b8' }}>📖 MÓDULOS</p>
-        <div className="space-y-2 mb-6">
-          {[
-            { emoji: '💆', title: 'Relajación muscular', sub: 'Técnica de Jacobson', path: '/relajacion', bg: '#fff1f2' },
-            { emoji: '🧠', title: 'Ansiedad y exámenes', sub: '4 sesiones · Psicoeducación', path: '/ansiedad-examenes', bg: '#f0f9ff' },
-            { emoji: '🫥', title: 'Cuando me quedo en blanco', sub: 'Protocolo + simulación', path: '/quedo-en-blanco', bg: '#f5f3ff' },
-            { emoji: '📓', title: 'Diario emocional', sub: 'Registra cómo te sientes', path: '/diario', bg: '#f0fdf4' },
-            { emoji: '🧪', title: 'Test de estrés', sub: 'Evalúa tu ansiedad', path: '/test-estres', bg: '#fefce8' },
-            { emoji: '☀️', title: 'Bienestar general', sub: 'Hábitos, retos y plan', path: '/bienestar', bg: '#fff7ed' },
-          ].map((item, i) => (
-            <motion.div key={item.path} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.22 + i * 0.04 }}>
-              <Link to={item.path}>
-                <div className="bg-white rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:shadow-md transition-all border"
-                  style={{ borderColor: 'rgba(0,0,0,0.04)' }}>
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
-                    style={{ background: item.bg }}>{item.emoji}</div>
-                  <div className="flex-1">
-                    <p className="font-bold text-sm" style={{ color: '#1a2744' }}>{item.title}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">{item.sub}</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-300" />
-                </div>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
 
       {/* ── BADGE PRIVACIDAD ── */}
       <motion.div className="flex justify-center mb-4"
