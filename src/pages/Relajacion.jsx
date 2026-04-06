@@ -104,9 +104,8 @@ export default function Relajacion() {
     return (
       <div className="max-w-lg mx-auto px-4 py-6">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center">
-            <Heart className="w-5 h-5 text-white" />
-          </div>
+          <img src="https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/WhatsApp%20Image%202026-04-06%20at%2015.58.04.jpeg"
+            alt="Resetea" className="w-10 h-10 rounded-full object-cover shadow-md flex-shrink-0" />
           <div>
             <h1 className="text-xl font-black text-blue-900">Relajación muscular</h1>
             <p className="text-slate-500 text-sm">Técnica de Jacobson progresiva</p>

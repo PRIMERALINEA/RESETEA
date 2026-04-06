@@ -41,6 +41,8 @@ function PantallaIntro({ onNext }) {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <div className="text-center">
+        <img src="https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/WhatsApp%20Image%202026-04-06%20at%2015.58.04.jpeg"
+          alt="Resetea" className="w-16 h-16 rounded-full object-cover shadow-lg mx-auto mb-3" />
         <span className="text-6xl block mb-4">🫥</span>
         <h2 className="text-2xl font-black text-slate-800 mb-2">Cuando me quedo en blanco</h2>
         <p className="text-slate-500 text-sm">Aprende a recuperar el foco en 1–2 minutos sin levantarte de la mesa.</p>

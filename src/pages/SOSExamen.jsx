@@ -1010,7 +1010,8 @@ export default function SOSExamen() {
       <div className="rounded-3xl p-5 mb-6 text-white"
         style={{ background: 'linear-gradient(135deg, #7f1d1d, #dc2626)' }}>
         <div className="flex items-center gap-3 mb-2">
-          <AlertCircle className="w-8 h-8 text-white" />
+          <img src="https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/WhatsApp%20Image%202026-04-06%20at%2015.58.04.jpeg"
+            alt="Resetea" className="w-10 h-10 rounded-full object-cover border-2 border-white/30 flex-shrink-0" />
           <div>
             <h1 className="text-2xl font-black">SOS Examen</h1>
             <p className="text-red-200 text-sm">Técnicas de emergencia para antes y durante el examen</p>

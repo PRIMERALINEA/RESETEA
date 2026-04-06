@@ -5,7 +5,7 @@ import { supabase } from '@/api/supabaseClient'
 import { ChevronRight, X, ClipboardList, AlertCircle, Zap } from 'lucide-react'
 import EvaluacionQuincenal from '@/components/EvaluacionQuincenal'
 
-const LOGO_URL = 'https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/Gemini_Generated_Image_rar33drar33drar3.png'
+const LOGO_URL = 'https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/WhatsApp%20Image%202026-04-06%20at%2015.58.04.jpeg'
 
 const ESTADOS = [
   { valor: 0, label: 'Muy estresado/a',    emoji: '😱', color: '#dc2626', bg: '#fee2e2', semaforo: 'rojo' },

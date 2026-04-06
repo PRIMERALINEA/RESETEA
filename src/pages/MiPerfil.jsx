@@ -234,10 +234,8 @@ Los datos son personales y confidenciales.`
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
         className="flex items-center gap-4 mb-6">
-        <div className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg"
-          style={{ background: 'linear-gradient(135deg, #0d3d3d, #0f6b6b)' }}>
-          <User className="w-8 h-8 text-white" />
-        </div>
+        <img src="https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/WhatsApp%20Image%202026-04-06%20at%2015.58.04.jpeg"
+          alt="Resetea" className="w-16 h-16 rounded-full object-cover shadow-lg flex-shrink-0" />
         <div>
           <p className="font-black text-xl" style={{ color: '#0d3d3d' }}>
             {userEmail.split('@')[0]}
