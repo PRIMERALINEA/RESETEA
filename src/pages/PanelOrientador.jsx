@@ -141,8 +141,12 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
   const [riesgoCurso, setRiesgoCurso] = useState([])
   const [lastUpdate, setLastUpdate] = useState(null)
 
-  const cargar = async () => {
-    setLoading(true)
+  const [autoRefresh, setAutoRefresh] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const cargar = async (silencioso = false) => {
+    if (!silencioso) setLoading(true)
+    else setRefreshing(true)
     try {
       const [r1, r2, r3, r4, r5, r6, r7, r8, r9] = await Promise.all([
         supabase.rpc('get_orientador_metricas_generales'),
@@ -166,10 +170,36 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
       if (r9.data) setRiesgoCurso(r9.data)
       setLastUpdate(new Date())
     } catch (e) { console.error(e) }
-    finally { setLoading(false) }
+    finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
   }
 
+  // Carga inicial
   useEffect(() => { cargar() }, [])
+
+  // Polling automatico cada 30 segundos
+  useEffect(() => {
+    if (!autoRefresh) return
+    const interval = setInterval(() => cargar(true), 30000)
+    return () => clearInterval(interval)
+  }, [autoRefresh])
+
+  // Suscripciones en tiempo real Supabase
+  useEffect(() => {
+    const tablas = [
+      'sesiones_respiracion', 'sesiones_anclaje', 'sesiones_relajacion',
+      'sesiones_tecnicas', 'test_estres', 'diario_estudiante', 'evaluaciones_quincenales',
+    ]
+    const suscripciones = tablas.map(tabla =>
+      supabase
+        .channel('realtime_' + tabla)
+        .on('postgres_changes', { event: '*', schema: 'public', table: tabla }, () => cargar(true))
+        .subscribe()
+    )
+    return () => { suscripciones.forEach(s => supabase.removeChannel(s)) }
+  }, [])
 
   const TABS = [
     { id: 'resumen',     label: 'Resumen',    icon: BarChart2 },
@@ -192,11 +222,31 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
           <div className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-blue-600" />
             <p className="font-black text-slate-800">Panel Orientador</p>
+            {refreshing && (
+              <RefreshCw className="w-3.5 h-3.5 text-teal-500 animate-spin" />
+            )}
           </div>
-          <p className="text-slate-500 text-xs">{orientador.centro} · {lastUpdate?.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-slate-500 text-xs">
+              {orientador.centro} · Actualizado: {lastUpdate?.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </p>
+            <div className="flex items-center gap-1">
+              <div className="w-1.5 h-1.5 rounded-full animate-pulse"
+                style={{ background: autoRefresh ? '#16a34a' : '#94a3b8' }} />
+              <span className="text-xs" style={{ color: autoRefresh ? '#16a34a' : '#94a3b8' }}>
+                {autoRefresh ? 'En vivo' : 'Pausado'}
+              </span>
+            </div>
+          </div>
         </div>
         <div className="flex gap-2">
-          <button onClick={cargar}
+          <button onClick={() => setAutoRefresh(!autoRefresh)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium"
+            style={{ background: autoRefresh ? '#dcfce7', color: '#16a34a' }}>
+            <div className="w-2 h-2 rounded-full" style={{ background: autoRefresh ? '#16a34a' : '#94a3b8' }} />
+            {autoRefresh ? 'En vivo' : 'Pausado'}
+          </button>
+          <button onClick={() => cargar(false)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-teal-600 bg-teal-50">
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
