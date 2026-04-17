@@ -21,6 +21,7 @@ import AnsiedadExamenes from '@/pages/AnsiedadExamenes'
 import QuedoEnBlanco from '@/pages/QuedoEnBlanco'
 import SOSExamen from '@/pages/SOSExamen'
 import PanelOrientador from '@/pages/PanelOrientador'
+import PanelDocente from '@/pages/PanelDocente'
 import Bienestar from '@/pages/Bienestar'
 import ModuloFamilias from '@/pages/ModuloFamilias'
 import Layout from '@/components/Layout'
@@ -67,6 +68,7 @@ export default function App() {
       <Route path="/quedo-en-blanco" element={<PL><QuedoEnBlanco /></PL>} />
       <Route path="/sos-examen" element={<PL><SOSExamen /></PL>} />
       <Route path="/orientador" element={<PanelOrientador />} />
+      <Route path="/docentes" element={<PanelDocente />} />
       <Route path="/bienestar" element={<PL><Bienestar /></PL>} />
       <Route path="/familias" element={<PL><ModuloFamilias /></PL>} />
       <Route path="/privacidad" element={<PoliticaPrivacidad />} />
