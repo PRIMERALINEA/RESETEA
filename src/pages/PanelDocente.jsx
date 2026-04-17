@@ -441,8 +441,7 @@ export default function PanelDocente() {
               <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#6366f1' }} />
               <p className="text-xs text-slate-600 leading-relaxed">
                 <strong>Nota profesional:</strong> Si llevas más de dos semanas experimentando síntomas
-                persistentes de agotamiento, considera consultar con el servicio de salud laboral de
-                tu centro o con un psicólogo especializado en salud ocupacional.
+persistentes de agotamiento, considera consultar con tu médico o con el orientador de tu centro.
               </p>
             </div>
 
