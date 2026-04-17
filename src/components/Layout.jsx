@@ -150,6 +150,7 @@ export default function Layout({ children }) {
               { name: 'Inicio', sub: 'Panel principal', path: '/', icon: Home },
               { name: 'Mi Perfil', sub: 'Actividades y logros', path: '/perfil', icon: User },
               { name: 'Panel Orientador', sub: 'Acceso con código', path: '/orientador', icon: Shield },
+              { name: 'Espacio Docente', sub: 'Bienestar del profesorado', path: '/docentes', icon: Heart },
               { name: 'Panel Admin', sub: 'Métricas y usuarios', path: '/admin', icon: BarChart2 },
             ].map(item => (
               <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
