@@ -242,7 +242,7 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
         <div className="flex gap-2">
           <button onClick={() => setAutoRefresh(!autoRefresh)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium"
-            style={{ background: autoRefresh ? '#dcfce7', color: '#16a34a' }}>
+            style={{ background: autoRefresh ? '#dcfce7' : '#fee2e2', color: autoRefresh ? '#16a34a' : '#dc2626' }}>
             <div className="w-2 h-2 rounded-full" style={{ background: autoRefresh ? '#16a34a' : '#94a3b8' }} />
             {autoRefresh ? 'En vivo' : 'Pausado'}
           </button>
