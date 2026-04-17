@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/AuthContext'
-import { Wind, Anchor, BookOpen, Heart, Brain, Home, LogOut, Menu, X, ChevronDown, ChevronRight, Zap, AlertCircle, Sun, User, BarChart2, Shield, GraduationCap } from 'lucide-react'
+import { Wind, Anchor, BookOpen, Heart, Brain, Home, LogOut, Menu, X, ChevronDown, ChevronRight, Zap, AlertCircle, Sun, User, BarChart2, Shield } from 'lucide-react'
 
 const LOGO_URL = 'https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/WhatsApp%20Image%202026-04-06%20at%2015.58.04.jpeg'
 
@@ -147,11 +147,11 @@ export default function Layout({ children }) {
           {/* Links principales */}
           <div className="px-4 pt-4 space-y-1">
             {[
-              { name: 'Inicio', sub: 'Panel principal', path: '/', icon: Home },
-              { name: 'Mi Perfil', sub: 'Actividades y logros', path: '/perfil', icon: User },
-              { name: 'Panel Orientador', sub: 'Acceso con código', path: '/orientador', icon: Shield },
-              { name: 'Panel Docente', sub: 'Recursos para el profesorado', path: '/docentes', icon: GraduationCap },
-              { name: 'Panel Admin', sub: 'Métricas y usuarios', path: '/admin', icon: BarChart2 },
+              { name: 'Inicio',           sub: 'Panel principal',            path: '/',          icon: Home,     isLogo: false },
+              { name: 'Mi Perfil',        sub: 'Actividades y logros',       path: '/perfil',    icon: User,     isLogo: false },
+              { name: 'Panel Orientador', sub: 'Acceso con código',          path: '/orientador',icon: Shield,   isLogo: false },
+              { name: 'Panel Docente',    sub: 'Recursos para el profesorado', path: '/docentes', icon: null,    isLogo: true  },
+              { name: 'Panel Admin',      sub: 'Métricas y usuarios',        path: '/admin',     icon: BarChart2,isLogo: false },
             ].map(item => (
               <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
                 className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all"
@@ -159,8 +159,16 @@ export default function Layout({ children }) {
                   background: isActive(item.path) ? 'rgba(99,210,190,0.15)' : 'transparent',
                   border: isActive(item.path) ? '1px solid rgba(99,210,190,0.3)' : '1px solid transparent',
                 }}>
-                <item.icon className="w-5 h-5 flex-shrink-0"
-                  style={{ color: isActive(item.path) ? '#63d2be' : 'rgba(255,255,255,0.5)' }} />
+                {item.isLogo
+                  ? <img
+                      src={LOGO_URL}
+                      alt="Resetea"
+                      className="w-5 h-5 rounded-full object-cover flex-shrink-0"
+                      style={{ opacity: isActive(item.path) ? 1 : 0.5 }}
+                    />
+                  : <item.icon className="w-5 h-5 flex-shrink-0"
+                      style={{ color: isActive(item.path) ? '#63d2be' : 'rgba(255,255,255,0.5)' }} />
+                }
                 <div>
                   <p className="font-semibold text-sm"
                     style={{ color: isActive(item.path) ? '#63d2be' : 'rgba(255,255,255,0.8)' }}>
