@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/api/supabaseClient'
 import {
-  Shield, Eye, EyeOff, LogOut, RefreshCw,
-  Heart, Wind, Zap, BookOpen, TrendingUp,
-  CheckCircle, ChevronRight, ChevronDown, AlertTriangle,
-  Sun, CloudRain, Cloud, Sunset, Moon,
-  BarChart2, Activity, Clock, Star
+  Eye, EyeOff, LogOut,
+  Heart, Wind,
+  CheckCircle, ChevronRight, ChevronDown,
+  BarChart2, Activity
 } from 'lucide-react'
 
 // ─────────────────────────────────────────────────────────────
