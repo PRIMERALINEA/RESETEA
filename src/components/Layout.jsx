@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/AuthContext'
-import { Wind, Anchor, BookOpen, Heart, Brain, Home, LogOut, Menu, X, ChevronDown, ChevronRight, Zap, AlertCircle, Sun, User, BarChart2, Shield } from 'lucide-react'
+import { Wind, Anchor, BookOpen, Heart, Brain, Home, LogOut, Menu, X, ChevronDown, ChevronRight, Zap, AlertCircle, Sun, User, BarChart2, Shield, GraduationCap } from 'lucide-react'
 
 const LOGO_URL = 'https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/WhatsApp%20Image%202026-04-06%20at%2015.58.04.jpeg'
 
@@ -150,6 +150,7 @@ export default function Layout({ children }) {
               { name: 'Inicio', sub: 'Panel principal', path: '/', icon: Home },
               { name: 'Mi Perfil', sub: 'Actividades y logros', path: '/perfil', icon: User },
               { name: 'Panel Orientador', sub: 'Acceso con código', path: '/orientador', icon: Shield },
+              { name: 'Panel Docente', sub: 'Recursos para el profesorado', path: '/docentes', icon: GraduationCap },
               { name: 'Panel Admin', sub: 'Métricas y usuarios', path: '/admin', icon: BarChart2 },
             ].map(item => (
               <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}

@@ -48,31 +48,31 @@ export default function App() {
     <>
       {!consentDado && <RgpdBanner onAceptar={darConsent} />}
       <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/" element={<PL><Home /></PL>} />
-      <Route path="/respiracion" element={<PL><Respiracion /></PL>} />
-      <Route path="/anclajes" element={<PL><Anclajes /></PL>} />
-      <Route path="/diario" element={<PL><Diario /></PL>} />
-      <Route path="/relajacion" element={<PL><Relajacion /></PL>} />
-      <Route path="/test-estres" element={<PL><TestEstres /></PL>} />
-      <Route path="/tecnicas-rapidas" element={<PL><TecnicasRapidas /></PL>} />
-      <Route path="/kit-emergencia" element={<PL><KitEmergencia /></PL>} />
-      <Route path="/rutinas" element={<PL><Rutinas /></PL>} />
-      <Route path="/respiracion/cuadrada" element={<P><RespiracionCuadrada /></P>} />
-      <Route path="/relajacion/jacobson" element={<P><RelajacionJacobson /></P>} />
-      <Route path="/escalera-calmado" element={<P><EscaleraCalmado /></P>} />
-      <Route path="/grounding" element={<P><Grounding54321 /></P>} />
-      <Route path="/perfil" element={<PL><MiPerfil /></PL>} />
-      <Route path="/admin" element={<PL><AdminDashboard /></PL>} />
-      <Route path="/ansiedad-examenes" element={<PL><AnsiedadExamenes /></PL>} />
-      <Route path="/quedo-en-blanco" element={<PL><QuedoEnBlanco /></PL>} />
-      <Route path="/sos-examen" element={<PL><SOSExamen /></PL>} />
-      <Route path="/orientador" element={<PanelOrientador />} />
-      <Route path="/docentes" element={<PanelDocente />} />
-      <Route path="/bienestar" element={<PL><Bienestar /></PL>} />
-      <Route path="/familias" element={<PL><ModuloFamilias /></PL>} />
-      <Route path="/privacidad" element={<PoliticaPrivacidad />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<PL><Home /></PL>} />
+        <Route path="/respiracion" element={<PL><Respiracion /></PL>} />
+        <Route path="/anclajes" element={<PL><Anclajes /></PL>} />
+        <Route path="/diario" element={<PL><Diario /></PL>} />
+        <Route path="/relajacion" element={<PL><Relajacion /></PL>} />
+        <Route path="/test-estres" element={<PL><TestEstres /></PL>} />
+        <Route path="/tecnicas-rapidas" element={<PL><TecnicasRapidas /></PL>} />
+        <Route path="/kit-emergencia" element={<PL><KitEmergencia /></PL>} />
+        <Route path="/rutinas" element={<PL><Rutinas /></PL>} />
+        <Route path="/respiracion/cuadrada" element={<P><RespiracionCuadrada /></P>} />
+        <Route path="/relajacion/jacobson" element={<P><RelajacionJacobson /></P>} />
+        <Route path="/escalera-calmado" element={<P><EscaleraCalmado /></P>} />
+        <Route path="/grounding" element={<P><Grounding54321 /></P>} />
+        <Route path="/perfil" element={<PL><MiPerfil /></PL>} />
+        <Route path="/admin" element={<PL><AdminDashboard /></PL>} />
+        <Route path="/ansiedad-examenes" element={<PL><AnsiedadExamenes /></PL>} />
+        <Route path="/quedo-en-blanco" element={<PL><QuedoEnBlanco /></PL>} />
+        <Route path="/sos-examen" element={<PL><SOSExamen /></PL>} />
+        <Route path="/orientador" element={<PanelOrientador />} />
+        <Route path="/docentes" element={<PL><PanelDocente /></PL>} />
+        <Route path="/bienestar" element={<PL><Bienestar /></PL>} />
+        <Route path="/familias" element={<PL><ModuloFamilias /></PL>} />
+        <Route path="/privacidad" element={<PoliticaPrivacidad />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   )
