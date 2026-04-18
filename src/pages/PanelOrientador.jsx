@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Users, Activity, TrendingUp, Brain, Calendar, AlertTriangle,
   BookOpen, Heart, RefreshCw, LogOut, ChevronRight, Eye, EyeOff,
-  Wind, Anchor, Zap, BarChart2, Shield
+  Wind, Anchor, Zap, BarChart2, Shield, GraduationCap
 } from 'lucide-react'
 
 // ── COLORES ───────────────────────────────────────────────────
@@ -73,13 +73,9 @@ function LoginOrientador({ onAcceso }) {
 
         <div className="bg-white rounded-3xl shadow-2xl p-6 space-y-4">
           <p className="font-bold text-slate-700">Introduce tu código de acceso</p>
-
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
-              {error}
-            </div>
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">{error}</div>
           )}
-
           <div className="relative">
             <input
               type={showCode ? 'text' : 'password'}
@@ -94,13 +90,11 @@ function LoginOrientador({ onAcceso }) {
               {showCode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
           </div>
-
           <button onClick={verificar} disabled={loading || !codigo}
             className="w-full py-3 rounded-xl text-white font-bold disabled:opacity-50"
             style={{ background: 'linear-gradient(135deg, #0d3d3d, #1d4ed8)' }}>
             {loading ? 'Verificando...' : 'Acceder al panel'}
           </button>
-
           <p className="text-xs text-slate-400 text-center">
             ¿No tienes código? Contacta con el administrador del centro.
           </p>
@@ -140,9 +134,12 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
   const [cursos, setCursos] = useState([])
   const [riesgoCurso, setRiesgoCurso] = useState([])
   const [lastUpdate, setLastUpdate] = useState(null)
-
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+
+  // ── Estado docentes ──
+  const [docentes, setDocentes] = useState([])
+  const [loadingDocentes, setLoadingDocentes] = useState(false)
 
   const cargar = async (silencioso = false) => {
     if (!silencioso) setLoading(true)
@@ -170,23 +167,96 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
       if (r9.data) setRiesgoCurso(r9.data)
       setLastUpdate(new Date())
     } catch (e) { console.error(e) }
-    finally {
-      setLoading(false)
-      setRefreshing(false)
-    }
+    finally { setLoading(false); setRefreshing(false) }
   }
 
-  // Carga inicial
+  // ── Cargar datos docentes directamente ──
+  const cargarDocentes = async () => {
+    setLoadingDocentes(true)
+    try {
+      const hace7dias  = new Date(Date.now() - 7  * 24 * 60 * 60 * 1000).toISOString()
+      const hace30dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+
+      // Todos los docentes registrados
+      const { data: perfiles } = await supabase
+        .from('perfiles_docentes')
+        .select('user_id, created_at, centro_id')
+
+      if (!perfiles || perfiles.length === 0) { setDocentes([]); return }
+
+      const userIds = perfiles.map(p => p.user_id)
+
+      // Sesiones de respiración de docentes
+      const { data: sesRespiracion } = await supabase
+        .from('sesiones_respiracion')
+        .select('user_id, created_at')
+        .in('user_id', userIds)
+
+      // Sesiones de relajación de docentes
+      const { data: sesRelajacion } = await supabase
+        .from('sesiones_relajacion')
+        .select('user_id, created_at')
+        .in('user_id', userIds)
+
+      // Sesiones de anclaje de docentes
+      const { data: sesAnclaje } = await supabase
+        .from('sesiones_anclaje')
+        .select('user_id, created_at')
+        .in('user_id', userIds)
+
+      // Construir resumen por docente (hash para privacidad)
+      const todasSesiones = [
+        ...(sesRespiracion || []).map(s => ({ ...s, tipo: 'respiracion' })),
+        ...(sesRelajacion  || []).map(s => ({ ...s, tipo: 'relajacion' })),
+        ...(sesAnclaje     || []).map(s => ({ ...s, tipo: 'anclaje' })),
+      ]
+
+      const resumen = perfiles.map(p => {
+        const sesiones = todasSesiones.filter(s => s.user_id === p.user_id)
+        const ultimaSesion = sesiones.length > 0
+          ? sesiones.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0].created_at
+          : null
+        const activo7  = sesiones.filter(s => s.created_at >= hace7dias).length > 0
+        const activo30 = sesiones.filter(s => s.created_at >= hace30dias).length > 0
+        const diasSinActividad = ultimaSesion
+          ? Math.floor((Date.now() - new Date(ultimaSesion)) / (1000 * 60 * 60 * 24))
+          : null
+        const usosPorTipo = {
+          respiracion: sesiones.filter(s => s.tipo === 'respiracion').length,
+          relajacion:  sesiones.filter(s => s.tipo === 'relajacion').length,
+          anclaje:     sesiones.filter(s => s.tipo === 'anclaje').length,
+        }
+        // Hash simple para privacidad
+        const hash = p.user_id.slice(0, 8)
+        return {
+          hash,
+          registrado: p.created_at,
+          totalSesiones: sesiones.length,
+          ultimaSesion,
+          activo7,
+          activo30,
+          diasSinActividad,
+          usosPorTipo,
+        }
+      })
+
+      setDocentes(resumen)
+    } catch (e) { console.error(e) }
+    finally { setLoadingDocentes(false) }
+  }
+
   useEffect(() => { cargar() }, [])
 
-  // Polling automatico cada 30 segundos
+  useEffect(() => {
+    if (tab === 'docentes') cargarDocentes()
+  }, [tab])
+
   useEffect(() => {
     if (!autoRefresh) return
     const interval = setInterval(() => cargar(true), 30000)
     return () => clearInterval(interval)
   }, [autoRefresh])
 
-  // Suscripciones en tiempo real Supabase
   useEffect(() => {
     const tablas = [
       'sesiones_respiracion', 'sesiones_anclaje', 'sesiones_relajacion',
@@ -202,16 +272,23 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
   }, [])
 
   const TABS = [
-    { id: 'resumen',     label: 'Resumen',    icon: BarChart2 },
-    { id: 'cursos',      label: 'Cursos',     icon: BookOpen },
-    { id: 'herramientas', label: 'Uso',       icon: Activity },
-    { id: 'ansiedad',    label: 'Ansiedad',   icon: Brain },
-    { id: 'quincenales', label: 'Quincenal',  icon: Calendar },
-    { id: 'riesgo',      label: 'Atención',   icon: AlertTriangle },
+    { id: 'resumen',      label: 'Resumen',    icon: BarChart2 },
+    { id: 'cursos',       label: 'Cursos',     icon: BookOpen },
+    { id: 'herramientas', label: 'Uso',        icon: Activity },
+    { id: 'ansiedad',     label: 'Ansiedad',   icon: Brain },
+    { id: 'quincenales',  label: 'Quincenal',  icon: Calendar },
+    { id: 'riesgo',       label: 'Atención',   icon: AlertTriangle },
+    { id: 'docentes',     label: 'Docentes',   icon: GraduationCap },
   ]
 
   const maxHerramienta = Math.max(...herramientas.map(h => h.total), 1)
-  const maxEvolucion = Math.max(...evolucion.map(e => e.total_actividades), 1)
+  const maxEvolucion   = Math.max(...evolucion.map(e => e.total_actividades), 1)
+
+  // Métricas rápidas docentes
+  const docentesActivos7  = docentes.filter(d => d.activo7).length
+  const docentesActivos30 = docentes.filter(d => d.activo30).length
+  const totalSesionesDoc  = docentes.reduce((a, d) => a + d.totalSesiones, 0)
+  const sinActividad14    = docentes.filter(d => d.diasSinActividad === null || d.diasSinActividad > 14).length
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-4">
@@ -222,9 +299,7 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
           <div className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-blue-600" />
             <p className="font-black text-slate-800">Panel Orientador</p>
-            {refreshing && (
-              <RefreshCw className="w-3.5 h-3.5 text-teal-500 animate-spin" />
-            )}
+            {refreshing && <RefreshCw className="w-3.5 h-3.5 text-teal-500 animate-spin" />}
           </div>
           <div className="flex items-center gap-2 mt-0.5">
             <p className="text-slate-500 text-xs">
@@ -261,7 +336,7 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
       <div className="bg-blue-50 rounded-2xl p-3 mb-4 flex items-start gap-2 border border-blue-100">
         <Shield className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
         <p className="text-blue-700 text-xs leading-relaxed">
-          Todos los datos son <strong>anónimos y agregados</strong>. No se identifican alumnos individuales. Los hashes son irreversibles.
+          Todos los datos son <strong>anónimos y agregados</strong>. No se identifican usuarios individuales. Los hashes son irreversibles.
         </p>
       </div>
 
@@ -331,9 +406,7 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
                           <p className="text-slate-400 text-xs">Actividades</p>
                         </div>
                         <div className="bg-slate-50 rounded-xl p-3 text-center">
-                          <p className="font-black text-lg" style={{ color: ansiedadColor }}>
-                            {c.ansiedad_media ?? '—'}
-                          </p>
+                          <p className="font-black text-lg" style={{ color: ansiedadColor }}>{c.ansiedad_media ?? '—'}</p>
                           <p className="text-slate-400 text-xs">Ansiedad media</p>
                         </div>
                       </div>
@@ -374,25 +447,21 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
             </motion.div>
           )}
 
-          {/* ── RESUMEN ── */}}
+          {/* ── RESUMEN ── */}
           {tab === 'resumen' && (
             <motion.div key="resumen" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
               className="space-y-5">
               <div className="grid grid-cols-2 gap-3">
-                <KpiCard icon={Users}       label="Alumnos registrados"   value={metricas?.total_usuarios}          color="#0f6b6b" delay={0.05} />
-                <KpiCard icon={Activity}    label="Actividades totales"    value={metricas?.total_actividades}       color="#7c3aed" delay={0.1}  />
-                <KpiCard icon={Calendar}    label="Activos esta semana"    value={metricas?.usuarios_activos_semana} color="#0891b2" delay={0.15} sub="Últimos 7 días" />
-                <KpiCard icon={TrendingUp}  label="Activos este mes"       value={metricas?.usuarios_activos_mes}    color="#b45309" delay={0.2}  sub="Últimos 30 días" />
-                <KpiCard icon={Brain}       label="Tests completados"      value={metricas?.tests_completados}       color="#be185d" delay={0.25} />
-                <KpiCard icon={Heart}       label="Ansiedad media grupo"   value={metricas?.ansiedad_promedio != null ? `${metricas.ansiedad_promedio} pts` : '—'} color="#dc2626" delay={0.3} sub="GAD-7" />
+                <KpiCard icon={Users}      label="Alumnos registrados"   value={metricas?.total_usuarios}          color="#0f6b6b" delay={0.05} />
+                <KpiCard icon={Activity}   label="Actividades totales"    value={metricas?.total_actividades}       color="#7c3aed" delay={0.1}  />
+                <KpiCard icon={Calendar}   label="Activos esta semana"    value={metricas?.usuarios_activos_semana} color="#0891b2" delay={0.15} sub="Últimos 7 días" />
+                <KpiCard icon={TrendingUp} label="Activos este mes"       value={metricas?.usuarios_activos_mes}    color="#b45309" delay={0.2}  sub="Últimos 30 días" />
+                <KpiCard icon={Brain}      label="Tests completados"      value={metricas?.tests_completados}       color="#be185d" delay={0.25} />
+                <KpiCard icon={Heart}      label="Ansiedad media grupo"   value={metricas?.ansiedad_promedio != null ? `${metricas.ansiedad_promedio} pts` : '—'} color="#dc2626" delay={0.3} sub="GAD-7" />
               </div>
-
-              {/* Mejora pre/post */}
               {metricas?.mejoria_promedio_pre_post && (
                 <div className="bg-green-50 rounded-2xl p-4 border border-green-100">
-                  <p className="font-bold text-green-800 text-sm mb-1">
-                    📈 Eficacia de las técnicas
-                  </p>
+                  <p className="font-bold text-green-800 text-sm mb-1">📈 Eficacia de las técnicas</p>
                   <p className="text-green-700 text-sm">
                     Reducción media de malestar tras usar una técnica:
                     <span className="font-black text-lg ml-2">{metricas.mejoria_promedio_pre_post} pts</span>
@@ -400,8 +469,6 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
                   <p className="text-green-600 text-xs mt-1">Basado en evaluaciones pre/post de los alumnos</p>
                 </div>
               )}
-
-              {/* Evolución semanal */}
               {evolucion.length > 0 && (
                 <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
                   <p className="font-black text-slate-800 mb-4">Actividad semanal (últimas 10 semanas)</p>
@@ -471,8 +538,6 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
           {tab === 'ansiedad' && (
             <motion.div key="ansiedad" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
               className="space-y-4">
-
-              {/* Distribución niveles */}
               <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
                 <div className="flex items-center gap-2 mb-4">
                   <Brain className="w-5 h-5 text-rose-500" />
@@ -503,8 +568,6 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
                   </div>
                 )}
               </div>
-
-              {/* Pre/post por ejercicio */}
               {prepost.length > 0 && (
                 <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
                   <p className="font-black text-slate-800 mb-1">Eficacia pre/post por ejercicio</p>
@@ -541,21 +604,19 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
               <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
                 <p className="font-black text-slate-800 mb-1">Evaluaciones quincenales del grupo</p>
                 <p className="text-slate-400 text-xs mb-4">Escala 1-5 · Promedio del grupo por semana</p>
-
                 {quincenales.length === 0 ? (
                   <p className="text-slate-400 text-sm text-center py-4">Sin evaluaciones completadas aún</p>
                 ) : (
                   <>
-                    {/* Últimos valores */}
                     {(() => {
                       const ultima = quincenales[quincenales.length - 1]
                       return (
                         <div className="grid grid-cols-2 gap-3 mb-5">
                           {[
-                            { label: 'Rumiación', val: ultima.rumiacion_media, inv: true, emoji: '🔄', desc: 'Menos es mejor' },
-                            { label: 'Atención presente', val: ultima.atencion_media, inv: false, emoji: '🎯', desc: 'Más es mejor' },
-                            { label: 'Capacidad de calma', val: ultima.calma_media, inv: false, emoji: '🌊', desc: 'Más es mejor' },
-                            { label: 'Bienestar general', val: ultima.bienestar_media, inv: false, emoji: '✨', desc: 'Más es mejor' },
+                            { label: 'Rumiación',          val: ultima.rumiacion_media,  inv: true,  emoji: '🔄', desc: 'Menos es mejor' },
+                            { label: 'Atención presente',  val: ultima.atencion_media,   inv: false, emoji: '🎯', desc: 'Más es mejor' },
+                            { label: 'Capacidad de calma', val: ultima.calma_media,      inv: false, emoji: '🌊', desc: 'Más es mejor' },
+                            { label: 'Bienestar general',  val: ultima.bienestar_media,  inv: false, emoji: '✨', desc: 'Más es mejor' },
                           ].map(({ label, val, inv, emoji, desc }) => {
                             const score = parseFloat(val)
                             const bueno = inv ? score <= 2.5 : score >= 3.5
@@ -572,8 +633,6 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
                         </div>
                       )
                     })()}
-
-                    {/* Evolución tabla */}
                     <p className="font-bold text-slate-700 text-sm mb-2">Evolución por semanas</p>
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs">
@@ -592,25 +651,11 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
                             const fecha = new Date(q.semana)
                             return (
                               <tr key={i} className="border-t border-slate-50">
-                                <td className="py-1.5 pr-2 text-slate-500">
-                                  {fecha.getDate()}/{fecha.getMonth() + 1}
-                                </td>
-                                <td className="text-center py-1.5 px-1 font-bold"
-                                  style={{ color: q.rumiacion_media <= 2.5 ? '#16a34a' : '#dc2626' }}>
-                                  {q.rumiacion_media}
-                                </td>
-                                <td className="text-center py-1.5 px-1 font-bold"
-                                  style={{ color: q.atencion_media >= 3.5 ? '#16a34a' : '#dc2626' }}>
-                                  {q.atencion_media}
-                                </td>
-                                <td className="text-center py-1.5 px-1 font-bold"
-                                  style={{ color: q.calma_media >= 3.5 ? '#16a34a' : '#dc2626' }}>
-                                  {q.calma_media}
-                                </td>
-                                <td className="text-center py-1.5 px-1 font-bold"
-                                  style={{ color: q.bienestar_media >= 3.5 ? '#16a34a' : '#dc2626' }}>
-                                  {q.bienestar_media}
-                                </td>
+                                <td className="py-1.5 pr-2 text-slate-500">{fecha.getDate()}/{fecha.getMonth() + 1}</td>
+                                <td className="text-center py-1.5 px-1 font-bold" style={{ color: q.rumiacion_media <= 2.5 ? '#16a34a' : '#dc2626' }}>{q.rumiacion_media}</td>
+                                <td className="text-center py-1.5 px-1 font-bold" style={{ color: q.atencion_media >= 3.5 ? '#16a34a' : '#dc2626' }}>{q.atencion_media}</td>
+                                <td className="text-center py-1.5 px-1 font-bold" style={{ color: q.calma_media >= 3.5 ? '#16a34a' : '#dc2626' }}>{q.calma_media}</td>
+                                <td className="text-center py-1.5 px-1 font-bold" style={{ color: q.bienestar_media >= 3.5 ? '#16a34a' : '#dc2626' }}>{q.bienestar_media}</td>
                                 <td className="text-center py-1.5 px-1 text-slate-400">{q.respuestas}</td>
                               </tr>
                             )
@@ -628,14 +673,12 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
           {tab === 'riesgo' && (
             <motion.div key="riesgo" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
               className="space-y-4">
-
               <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100">
                 <p className="font-bold text-amber-800 text-sm mb-1">⚠️ Sobre esta sección</p>
                 <p className="text-amber-700 text-xs leading-relaxed">
                   Muestra alumnos que podrían necesitar atención basándose en sus datos anónimos. Los identificadores son hashes irreversibles — no es posible saber quién es cada alumno.
                 </p>
               </div>
-
               {riesgo.length === 0 ? (
                 <div className="bg-green-50 rounded-2xl p-6 text-center border border-green-100">
                   <p className="text-4xl mb-2">✅</p>
@@ -656,18 +699,12 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-xs font-bold px-2 py-0.5 rounded-lg"
-                                style={{ color: cfg.color, background: cfg.bg }}>
-                                {r.motivo}
-                              </span>
+                                style={{ color: cfg.color, background: cfg.bg }}>{r.motivo}</span>
                             </div>
-                            <p className="text-xs font-mono text-slate-400 mb-2">
-                              ID: {r.alumno_hash.slice(0, 8)}...
-                            </p>
+                            <p className="text-xs font-mono text-slate-400 mb-2">ID: {r.alumno_hash.slice(0, 8)}...</p>
                             <div className="grid grid-cols-3 gap-2 text-xs">
                               <div className="bg-slate-50 rounded-lg p-2 text-center">
-                                <p className="font-black text-slate-800">
-                                  {r.ultimo_test_puntuacion > 0 ? r.ultimo_test_puntuacion : '—'}
-                                </p>
+                                <p className="font-black text-slate-800">{r.ultimo_test_puntuacion > 0 ? r.ultimo_test_puntuacion : '—'}</p>
                                 <p className="text-slate-400">GAD-7</p>
                               </div>
                               <div className="bg-slate-50 rounded-lg p-2 text-center">
@@ -689,6 +726,153 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
             </motion.div>
           )}
 
+          {/* ══════════════════════════════════════════════════════════
+              ── DOCENTES ──
+          ══════════════════════════════════════════════════════════ */}
+          {tab === 'docentes' && (
+            <motion.div key="docentes" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+              className="space-y-4">
+
+              {loadingDocentes ? (
+                <div className="flex justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+                </div>
+              ) : (
+                <>
+                  {/* KPIs docentes */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <KpiCard icon={GraduationCap} label="Docentes registrados"  value={docentes.length}      color="#6366f1" delay={0.05} />
+                    <KpiCard icon={Activity}      label="Sesiones totales"       value={totalSesionesDoc}    color="#f97316" delay={0.1}  />
+                    <KpiCard icon={Calendar}      label="Activos esta semana"    value={docentesActivos7}    color="#0891b2" delay={0.15} sub="Últimos 7 días" />
+                    <KpiCard icon={TrendingUp}    label="Activos este mes"       value={docentesActivos30}   color="#10b981" delay={0.2}  sub="Últimos 30 días" />
+                  </div>
+
+                  {/* Alerta sin actividad */}
+                  {sinActividad14 > 0 && (
+                    <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100 flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold text-amber-800 text-sm">
+                          {sinActividad14} docente{sinActividad14 > 1 ? 's' : ''} sin actividad en +14 días
+                        </p>
+                        <p className="text-amber-700 text-xs mt-0.5">
+                          Podría ser útil contactar para valorar si necesitan apoyo o tienen dificultades con la app.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Uso por tipo de herramienta */}
+                  {docentes.length > 0 && (
+                    <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+                      <p className="font-black text-slate-800 mb-4">Uso por herramienta (docentes)</p>
+                      <div className="space-y-3">
+                        {[
+                          { tipo: 'respiracion', label: 'Respiración', emoji: '🌬️', color: '#0891b2' },
+                          { tipo: 'relajacion',  label: 'Relajación',  emoji: '💆', color: '#be185d' },
+                          { tipo: 'anclaje',     label: 'Anclaje',     emoji: '⚓', color: '#1d4ed8' },
+                        ].map(h => {
+                          const total = docentes.reduce((a, d) => a + (d.usosPorTipo[h.tipo] || 0), 0)
+                          const maxTotal = Math.max(
+                            docentes.reduce((a, d) => a + (d.usosPorTipo.respiracion || 0), 0),
+                            docentes.reduce((a, d) => a + (d.usosPorTipo.relajacion  || 0), 0),
+                            docentes.reduce((a, d) => a + (d.usosPorTipo.anclaje     || 0), 0),
+                            1
+                          )
+                          const pct = Math.round((total / maxTotal) * 100)
+                          return (
+                            <div key={h.tipo}>
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center gap-2">
+                                  <span>{h.emoji}</span>
+                                  <span className="text-sm font-medium text-slate-700">{h.label}</span>
+                                </div>
+                                <span className="font-black text-sm" style={{ color: h.color }}>{total} usos</span>
+                              </div>
+                              <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                                <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                                  transition={{ duration: 0.8 }}
+                                  className="h-full rounded-full" style={{ background: h.color }} />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Listado individual docentes */}
+                  <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+                    <p className="font-black text-slate-800 mb-1">Registro individual de docentes</p>
+                    <p className="text-slate-400 text-xs mb-4">Identificadores anonimizados · Solo datos de uso</p>
+
+                    {docentes.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-4xl mb-2">👩‍🏫</p>
+                        <p className="font-bold text-slate-700">Sin docentes registrados aún</p>
+                        <p className="text-slate-400 text-sm mt-1">Los docentes deben registrarse seleccionando el rol "Docente"</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {docentes.map((d, i) => {
+                          const actividadColor = d.diasSinActividad === null ? '#94a3b8'
+                            : d.diasSinActividad <= 7  ? '#16a34a'
+                            : d.diasSinActividad <= 14 ? '#ca8a04'
+                            : '#dc2626'
+                          const actividadLabel = d.diasSinActividad === null ? 'Sin sesiones'
+                            : d.diasSinActividad === 0 ? 'Hoy'
+                            : `Hace ${d.diasSinActividad}d`
+                          const registradoFecha = new Date(d.registrado).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+                          return (
+                            <motion.div key={d.hash}
+                              initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
+                              className="rounded-2xl p-4 border"
+                              style={{ borderColor: d.diasSinActividad !== null && d.diasSinActividad > 14 ? '#fca5a5' : '#e2e8f0',
+                                       background: d.diasSinActividad !== null && d.diasSinActividad > 14 ? '#fef2f2' : 'white' }}>
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <p className="font-mono text-xs text-slate-400">ID: {d.hash}...</p>
+                                  <p className="text-xs text-slate-400 mt-0.5">Registrado: {registradoFecha}</p>
+                                </div>
+                                <span className="text-xs font-bold px-2 py-1 rounded-lg"
+                                  style={{ color: actividadColor, background: actividadColor + '15' }}>
+                                  {actividadLabel}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-4 gap-2 text-xs">
+                                <div className="bg-slate-50 rounded-xl p-2 text-center">
+                                  <p className="font-black text-slate-800">{d.totalSesiones}</p>
+                                  <p className="text-slate-400">Total</p>
+                                </div>
+                                <div className="bg-cyan-50 rounded-xl p-2 text-center">
+                                  <p className="font-black text-cyan-700">{d.usosPorTipo.respiracion}</p>
+                                  <p className="text-cyan-500">🌬️</p>
+                                </div>
+                                <div className="bg-rose-50 rounded-xl p-2 text-center">
+                                  <p className="font-black text-rose-700">{d.usosPorTipo.relajacion}</p>
+                                  <p className="text-rose-400">💆</p>
+                                </div>
+                                <div className="bg-blue-50 rounded-xl p-2 text-center">
+                                  <p className="font-black text-blue-700">{d.usosPorTipo.anclaje}</p>
+                                  <p className="text-blue-400">⚓</p>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <button onClick={cargarDocentes}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl text-xs font-medium text-indigo-600 bg-indigo-50 border border-indigo-100">
+                    <RefreshCw className="w-3.5 h-3.5" /> Actualizar datos de docentes
+                  </button>
+                </>
+              )}
+            </motion.div>
+          )}
+
         </AnimatePresence>
       )}
     </div>
@@ -698,7 +882,6 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
 // ── COMPONENTE RAÍZ ───────────────────────────────────────────
 export default function PanelOrientador() {
   const [orientador, setOrientador] = useState(null)
-
   return orientador
     ? <PanelOrientadorDashboard orientador={orientador} onSalir={() => setOrientador(null)} />
     : <LoginOrientador onAcceso={setOrientador} />
