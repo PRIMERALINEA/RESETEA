@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, X, ShieldCheck } from 'lucide-react'
 
 const LOGO_URL = 'https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/WhatsApp%20Image%202026-04-06%20at%2015.58.04.jpeg'
+
 const CURSOS = [
   '1º Primaria', '2º Primaria', '3º Primaria',
   '4º Primaria', '5º Primaria', '6º Primaria',
@@ -28,7 +29,7 @@ Los datos recogidos (email y curso) se utilizan exclusivamente para:
 
 Datos que se recogen:
 • Email institucional (@svalero.com)
-• Curso al que perteneces
+• Curso al que perteneces (alumnos) o centro (docentes)
 • Registros anónimos de uso de los módulos de la app
 
 Base legal:
@@ -47,34 +48,28 @@ Todos los datos se almacenan en servidores europeos (Supabase EU West) con cifra
 `
 
 export default function Login() {
-  const [email, setEmail]           = useState('')
-  const [password, setPassword]     = useState('')
+  const [email, setEmail]                     = useState('')
+  const [password, setPassword]               = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [curso, setCurso]           = useState('')
-  const [isRegister, setIsRegister] = useState(false)
-  const [loading, setLoading]       = useState(false)
-  const [error, setError]           = useState('')
-  const [success, setSuccess]       = useState('')
-  const [aceptaPolitica, setAceptaPolitica] = useState(false)
-  const [showPolitica, setShowPolitica]     = useState(false)
+  const [curso, setCurso]                     = useState('')
+  const [rol, setRol]                         = useState('alumno') // 'alumno' | 'docente'
+  const [isRegister, setIsRegister]           = useState(false)
+  const [loading, setLoading]                 = useState(false)
+  const [error, setError]                     = useState('')
+  const [success, setSuccess]                 = useState('')
+  const [aceptaPolitica, setAceptaPolitica]   = useState(false)
+  const [showPolitica, setShowPolitica]       = useState(false)
   const navigate = useNavigate()
 
   const handleSubmit = async () => {
     setLoading(true); setError(''); setSuccess('')
 
-    // Validar dominio dinámicamente contra tabla centros
     const dominio = email.split('@')[1]
-    if (!dominio) {
-      setError('Introduce un email válido')
-      setLoading(false); return
-    }
+    if (!dominio) { setError('Introduce un email válido'); setLoading(false); return }
 
     const { data: centroCheck } = await supabase
-      .from('centros')
-      .select('id, nombre')
-      .eq('dominio', dominio)
-      .eq('activo', true)
-      .single()
+      .from('centros').select('id, nombre')
+      .eq('dominio', dominio).eq('activo', true).single()
 
     if (!centroCheck) {
       setError('Tu centro educativo no está registrado en Resetea. Contacta con tu orientador/a.')
@@ -82,21 +77,17 @@ export default function Login() {
     }
 
     if (isRegister) {
-      if (!curso) {
-        setError('Por favor selecciona tu curso')
-        setLoading(false); return
+      if (rol === 'alumno' && !curso) {
+        setError('Por favor selecciona tu curso'); setLoading(false); return
       }
       if (!aceptaPolitica) {
-        setError('Debes aceptar la política de protección de datos para registrarte')
-        setLoading(false); return
+        setError('Debes aceptar la política de protección de datos para registrarte'); setLoading(false); return
       }
       if (password.length < 6) {
-        setError('La contraseña debe tener al menos 6 caracteres')
-        setLoading(false); return
+        setError('La contraseña debe tener al menos 6 caracteres'); setLoading(false); return
       }
       if (password !== confirmPassword) {
-        setError('Las contraseñas no coinciden')
-        setLoading(false); return
+        setError('Las contraseñas no coinciden'); setLoading(false); return
       }
     }
 
@@ -106,24 +97,47 @@ export default function Login() {
         if (signUpError) throw signUpError
 
         if (data?.user) {
-          await supabase.from('perfiles_alumnos').upsert({
-            user_id: data.user.id,
-            curso,
-            centro_id: centroCheck.id,
-            acepta_politica: true,
-            fecha_aceptacion: new Date().toISOString(),
-          }, { onConflict: 'user_id' })
+          if (rol === 'alumno') {
+            await supabase.from('perfiles_alumnos').upsert({
+              user_id: data.user.id,
+              curso,
+              rol: 'alumno',
+              centro_id: centroCheck.id,
+              acepta_politica: true,
+              fecha_aceptacion: new Date().toISOString(),
+            }, { onConflict: 'user_id' })
+          } else {
+            await supabase.from('perfiles_docentes').upsert({
+              user_id: data.user.id,
+              rol: 'docente',
+              centro_id: centroCheck.id,
+              acepta_politica: true,
+              fecha_aceptacion: new Date().toISOString(),
+            }, { onConflict: 'user_id' })
+          }
         }
+
         setSuccess('¡Cuenta creada! Revisa tu email para confirmar tu cuenta y después entra.')
         setIsRegister(false)
-        setPassword('')
-        setConfirmPassword('')
-        setCurso('')
-        setAceptaPolitica(false)
+        setPassword(''); setConfirmPassword(''); setCurso(''); setAceptaPolitica(false)
+
       } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+        // LOGIN — detectar rol para redirigir
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
         if (signInError) throw signInError
-        navigate('/')
+
+        const userId = signInData.user?.id
+        if (userId) {
+          const { data: docente } = await supabase
+            .from('perfiles_docentes').select('rol').eq('user_id', userId).single()
+          if (docente) {
+            navigate('/docentes')
+          } else {
+            navigate('/')
+          }
+        } else {
+          navigate('/')
+        }
       }
     } catch (e) {
       setError(e.message)
@@ -133,13 +147,11 @@ export default function Login() {
   }
 
   const canSubmit = email && password &&
-    (!isRegister || (curso && aceptaPolitica && confirmPassword))
+    (!isRegister || (aceptaPolitica && confirmPassword && (rol === 'docente' || curso)))
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{ background: 'linear-gradient(135deg, #0d3d3d 0%, #0f6b6b 50%, #1a9090 100%)' }}
-    >
+    <div className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: 'linear-gradient(135deg, #0d3d3d 0%, #0f6b6b 50%, #1a9090 100%)' }}>
       <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
 
         {/* Logo */}
@@ -161,6 +173,34 @@ export default function Login() {
           {error   && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">{error}</div>}
           {success && <div className="bg-teal-50 border border-teal-200 text-teal-700 text-sm rounded-xl px-4 py-3">{success}</div>}
 
+          {/* Selector de rol — solo en registro */}
+          {isRegister && (
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-2">¿Quién eres?</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { valor: 'alumno', emoji: '🎒', label: 'Alumno/a' },
+                  { valor: 'docente', emoji: '👩‍🏫', label: 'Docente' },
+                ].map(opcion => (
+                  <button
+                    key={opcion.valor}
+                    type="button"
+                    onClick={() => { setRol(opcion.valor); setCurso('') }}
+                    className="flex flex-col items-center gap-1.5 py-3 rounded-2xl border-2 font-bold text-sm transition-all"
+                    style={{
+                      background: rol === opcion.valor ? 'linear-gradient(135deg, #0d3d3d, #0f6b6b)' : 'white',
+                      borderColor: rol === opcion.valor ? '#0f6b6b' : '#e2e8f0',
+                      color: rol === opcion.valor ? 'white' : '#64748b',
+                    }}
+                  >
+                    <span className="text-2xl">{opcion.emoji}</span>
+                    {opcion.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Email */}
           <div>
             <label className="block text-sm font-medium text-slate-600 mb-1">Email</label>
@@ -172,8 +212,8 @@ export default function Login() {
             <p className="text-xs text-slate-400 mt-1">Usa el email de tu centro educativo</p>
           </div>
 
-          {/* Curso (solo registro) */}
-          {isRegister && (
+          {/* Curso — solo alumnos en registro */}
+          {isRegister && rol === 'alumno' && (
             <div>
               <label className="block text-sm font-medium text-slate-600 mb-1">Tu curso</label>
               <div className="relative">
@@ -201,7 +241,7 @@ export default function Login() {
             />
           </div>
 
-          {/* Confirmar contraseña (solo registro) */}
+          {/* Confirmar contraseña — solo registro */}
           {isRegister && (
             <div>
               <label className="block text-sm font-medium text-slate-600 mb-1">Confirmar contraseña</label>
@@ -214,23 +254,16 @@ export default function Login() {
             </div>
           )}
 
-          {/* Política de datos (solo registro) */}
+          {/* Política — solo registro */}
           {isRegister && (
             <div className="flex items-start gap-3 bg-slate-50 rounded-xl p-3">
-              <input
-                type="checkbox"
-                id="politica"
-                checked={aceptaPolitica}
+              <input type="checkbox" id="politica" checked={aceptaPolitica}
                 onChange={e => setAceptaPolitica(e.target.checked)}
-                className="mt-0.5 w-4 h-4 accent-teal-600 cursor-pointer flex-shrink-0"
-              />
+                className="mt-0.5 w-4 h-4 accent-teal-600 cursor-pointer flex-shrink-0" />
               <label htmlFor="politica" className="text-xs text-slate-600 leading-relaxed cursor-pointer">
                 He leído y acepto la{' '}
-                <button
-                  type="button"
-                  onClick={() => setShowPolitica(true)}
-                  className="text-teal-600 underline font-medium hover:text-teal-800"
-                >
+                <button type="button" onClick={() => setShowPolitica(true)}
+                  className="text-teal-600 underline font-medium hover:text-teal-800">
                   política de protección de datos
                 </button>
                 . Entiendo que mis datos se usarán únicamente para gestionar mi acceso y estadísticas anónimas de bienestar.
@@ -238,24 +271,16 @@ export default function Login() {
             </div>
           )}
 
-          <button
-            onClick={handleSubmit}
-            disabled={loading || !canSubmit}
+          <button onClick={handleSubmit} disabled={loading || !canSubmit}
             className="w-full py-3 rounded-xl text-white font-bold disabled:opacity-50 mt-2"
-            style={{ background: 'linear-gradient(135deg, #0d3d3d, #0f6b6b)' }}
-          >
+            style={{ background: 'linear-gradient(135deg, #0d3d3d, #0f6b6b)' }}>
             {loading ? 'Cargando...' : isRegister ? 'Crear cuenta' : 'Entrar'}
           </button>
 
-          <button
-            onClick={() => {
-              setIsRegister(!isRegister)
-              setError(''); setSuccess('')
-              setCurso(''); setAceptaPolitica(false)
-              setConfirmPassword('')
-            }}
-            className="w-full text-sm text-teal-600 hover:text-teal-800 transition-colors pt-1"
-          >
+          <button onClick={() => {
+            setIsRegister(!isRegister); setError(''); setSuccess('')
+            setCurso(''); setAceptaPolitica(false); setConfirmPassword(''); setRol('alumno')
+          }} className="w-full text-sm text-teal-600 hover:text-teal-800 transition-colors pt-1">
             {isRegister ? '¿Ya tienes cuenta? Entra aquí' : '¿Primera vez? Crea tu cuenta'}
           </button>
         </div>
@@ -263,52 +288,32 @@ export default function Login() {
         <p className="text-center text-xs text-teal-200/60 mt-6">Tus datos son privados y seguros 🔒</p>
       </motion.div>
 
-      {/* Modal Política de Datos */}
+      {/* Modal Política */}
       <AnimatePresence>
         {showPolitica && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ background: 'rgba(0,0,0,0.6)' }}
-            onClick={() => setShowPolitica(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={e => e.stopPropagation()}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col"
-            >
-              {/* Header modal */}
+            style={{ background: 'rgba(0,0,0,0.6)' }} onClick={() => setShowPolitica(false)}>
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }} onClick={e => e.stopPropagation()}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
               <div className="flex items-center justify-between p-6 border-b border-slate-100">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-5 h-5 text-teal-600" />
                   <h3 className="font-bold text-slate-800">Política de Protección de Datos</h3>
                 </div>
-                <button
-                  onClick={() => setShowPolitica(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors"
-                >
+                <button onClick={() => setShowPolitica(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
                   <X className="w-4 h-4 text-slate-500" />
                 </button>
               </div>
-
-              {/* Contenido */}
               <div className="overflow-y-auto p-6 flex-1">
-                <pre className="text-xs text-slate-600 whitespace-pre-wrap leading-relaxed font-sans">
-                  {POLITICA_TEXTO}
-                </pre>
+                <pre className="text-xs text-slate-600 whitespace-pre-wrap leading-relaxed font-sans">{POLITICA_TEXTO}</pre>
               </div>
-
-              {/* Footer modal */}
               <div className="p-6 border-t border-slate-100">
-                <button
-                  onClick={() => { setAceptaPolitica(true); setShowPolitica(false) }}
+                <button onClick={() => { setAceptaPolitica(true); setShowPolitica(false) }}
                   className="w-full py-3 rounded-xl text-white font-bold"
-                  style={{ background: 'linear-gradient(135deg, #0d3d3d, #0f6b6b)' }}
-                >
+                  style={{ background: 'linear-gradient(135deg, #0d3d3d, #0f6b6b)' }}>
                   Entendido, acepto la política
                 </button>
               </div>

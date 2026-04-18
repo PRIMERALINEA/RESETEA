@@ -10,7 +10,6 @@ const navGroups = [
     label: '⚡ HERRAMIENTAS RÁPIDAS',
     subtitle: 'Para el momento de necesidad',
     color: 'text-red-400',
-    borderColor: 'border-red-500/30',
     items: [
       { name: 'Kit de emergencia', sub: 'Ayuda inmediata', path: '/kit-emergencia', icon: AlertCircle },
       { name: 'Técnicas rápidas', sub: '1-3 minutos', path: '/tecnicas-rapidas', icon: Zap },
@@ -22,7 +21,6 @@ const navGroups = [
     label: '🌬️ RESPIRACIÓN',
     subtitle: 'Calma el estrés al momento',
     color: 'text-teal-400',
-    borderColor: 'border-teal-500/30',
     items: [
       { name: 'Técnicas de Respiración', sub: 'Guiada paso a paso', path: '/respiracion', icon: Wind },
     ]
@@ -31,7 +29,6 @@ const navGroups = [
     label: '⚓ ANCLAJE',
     subtitle: 'Vuelve al presente',
     color: 'text-blue-400',
-    borderColor: 'border-blue-500/30',
     items: [
       { name: 'Técnicas de Anclaje', sub: '5-4-3-2-1 y más', path: '/anclajes', icon: Anchor },
     ]
@@ -40,7 +37,6 @@ const navGroups = [
     label: '💆 RELAJACIÓN',
     subtitle: 'Suelta la tensión',
     color: 'text-rose-400',
-    borderColor: 'border-rose-500/30',
     items: [
       { name: 'Relajación Muscular', sub: 'Técnica de Jacobson', path: '/relajacion', icon: Heart },
     ]
@@ -49,7 +45,6 @@ const navGroups = [
     label: '📖 MÓDULOS',
     subtitle: 'Aprende a gestionar la ansiedad',
     color: 'text-indigo-400',
-    borderColor: 'border-indigo-500/30',
     items: [
       { name: '🚨 SOS Examen', sub: '9 técnicas · Voz guiada', path: '/sos-examen', icon: Zap },
       { name: 'Ansiedad y exámenes', sub: '4 sesiones · Psicoeducación', path: '/ansiedad-examenes', icon: Brain },
@@ -60,7 +55,6 @@ const navGroups = [
     label: '☀️ RUTINAS',
     subtitle: 'Hábitos que marcan la diferencia',
     color: 'text-amber-400',
-    borderColor: 'border-amber-500/30',
     items: [
       { name: 'Rutinas diarias', sub: 'Mañana, examen, noche', path: '/rutinas', icon: Sun },
       { name: 'Bienestar general', sub: 'Hábitos, retos y plan', path: '/bienestar', icon: Heart },
@@ -71,7 +65,6 @@ const navGroups = [
     label: '📓 DIARIO & TEST',
     subtitle: 'Conoce tu estado emocional',
     color: 'text-amber-400',
-    borderColor: 'border-amber-500/30',
     items: [
       { name: 'Diario Emocional', sub: 'Registra cómo te sientes', path: '/diario', icon: BookOpen },
       { name: 'Test de Estrés', sub: 'Evalúa tu ansiedad', path: '/test-estres', icon: Brain },
@@ -79,25 +72,28 @@ const navGroups = [
   },
 ]
 
-// Navegación inferior móvil
-const bottomNav = [
+const bottomNavAlumno = [
   { name: 'Inicio', path: '/', icon: '🏠' },
   { name: 'Diario', path: '/diario', icon: '📓' },
   { name: 'Rutinas', path: '/rutinas', icon: '☀️' },
   { name: 'Perfil', path: '/perfil', icon: '👤' },
 ]
 
+const bottomNavDocente = [
+  { name: 'Mi panel', path: '/docentes', icon: '👩‍🏫' },
+  { name: 'Perfil', path: '/perfil', icon: '👤' },
+]
+
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState({ '⚡ HERRAMIENTAS RÁPIDAS': true })
-  const { logout } = useAuth()
+  const { logout, isDocente } = useAuth()
   const location = useLocation()
 
-  const toggleGroup = (label) => {
-    setExpandedGroups(prev => ({ ...prev, [label]: !prev[label] }))
-  }
-
+  const toggleGroup = (label) => setExpandedGroups(prev => ({ ...prev, [label]: !prev[label] }))
   const isActive = (path) => location.pathname === path
+
+  const bottomNav = isDocente ? bottomNavDocente : bottomNavAlumno
 
   return (
     <div className="min-h-screen" style={{ background: '#f0f4f8' }}>
@@ -109,7 +105,9 @@ export default function Layout({ children }) {
           <img src={LOGO_URL} alt="Resetea" className="w-10 h-10 rounded-full object-cover border-2 border-white/20 shadow-md" />
           <div>
             <span className="font-black text-white text-lg tracking-tight">Resetea</span>
-            <p className="text-white/50 text-xs -mt-0.5">Tu espacio de calma</p>
+            <p className="text-white/50 text-xs -mt-0.5">
+              {isDocente ? 'Panel Docente' : 'Tu espacio de calma'}
+            </p>
           </div>
         </div>
         <button onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -132,97 +130,122 @@ export default function Layout({ children }) {
 
         <div className="flex flex-col min-h-full pb-4">
 
-          {/* Logo sidebar */}
+          {/* Logo */}
           <div className="p-6 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
             <div className="flex items-center gap-3">
               <img src={LOGO_URL} alt="Resetea"
                 className="w-12 h-12 rounded-full object-cover shadow-lg border-2 border-white/10" />
               <div>
                 <h1 className="font-black text-white text-xl tracking-tight">Resetea</h1>
-                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Tu espacio de calma y conexión</p>
+                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  {isDocente ? '👩‍🏫 Área docente' : 'Tu espacio de calma y conexión'}
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Links principales */}
-          <div className="px-4 pt-4 space-y-1">
-            {[
-              { name: 'Inicio',           sub: 'Panel principal',            path: '/',          icon: Home,     isLogo: false },
-              { name: 'Mi Perfil',        sub: 'Actividades y logros',       path: '/perfil',    icon: User,     isLogo: false },
-              { name: 'Panel Orientador', sub: 'Acceso con código',          path: '/orientador',icon: Shield,   isLogo: false },
-              { name: 'Panel Docente',    sub: 'Recursos para el profesorado', path: '/docentes', icon: null,    isLogo: true  },
-              { name: 'Panel Admin',      sub: 'Métricas y usuarios',        path: '/admin',     icon: BarChart2,isLogo: false },
-            ].map(item => (
-              <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all"
-                style={{
-                  background: isActive(item.path) ? 'rgba(99,210,190,0.15)' : 'transparent',
-                  border: isActive(item.path) ? '1px solid rgba(99,210,190,0.3)' : '1px solid transparent',
-                }}>
-                {item.isLogo
-                  ? <img
-                      src={LOGO_URL}
-                      alt="Resetea"
-                      className="w-5 h-5 rounded-full object-cover flex-shrink-0"
-                      style={{ opacity: isActive(item.path) ? 1 : 0.5 }}
-                    />
-                  : <item.icon className="w-5 h-5 flex-shrink-0"
+          {/* ── SIDEBAR DOCENTE ── */}
+          {isDocente ? (
+            <div className="px-4 pt-4 space-y-1">
+              {[
+                { name: 'Panel Docente', sub: 'Recursos y herramientas', path: '/docentes', icon: null, isLogo: true },
+                { name: 'Mi Perfil', sub: 'Tu cuenta', path: '/perfil', icon: User, isLogo: false },
+                { name: 'Panel Orientador', sub: 'Acceso con código', path: '/orientador', icon: Shield, isLogo: false },
+                { name: 'Panel Admin', sub: 'Métricas y usuarios', path: '/admin', icon: BarChart2, isLogo: false },
+              ].map(item => (
+                <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all"
+                  style={{
+                    background: isActive(item.path) ? 'rgba(99,210,190,0.15)' : 'transparent',
+                    border: isActive(item.path) ? '1px solid rgba(99,210,190,0.3)' : '1px solid transparent',
+                  }}>
+                  {item.isLogo
+                    ? <img src={LOGO_URL} alt="Resetea" className="w-5 h-5 rounded-full object-cover flex-shrink-0"
+                        style={{ opacity: isActive(item.path) ? 1 : 0.5 }} />
+                    : <item.icon className="w-5 h-5 flex-shrink-0"
+                        style={{ color: isActive(item.path) ? '#63d2be' : 'rgba(255,255,255,0.5)' }} />
+                  }
+                  <div>
+                    <p className="font-semibold text-sm"
+                      style={{ color: isActive(item.path) ? '#63d2be' : 'rgba(255,255,255,0.8)' }}>
+                      {item.name}
+                    </p>
+                    <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{item.sub}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            /* ── SIDEBAR ALUMNO ── */
+            <>
+              <div className="px-4 pt-4 space-y-1">
+                {[
+                  { name: 'Inicio', sub: 'Panel principal', path: '/', icon: Home, isLogo: false },
+                  { name: 'Mi Perfil', sub: 'Actividades y logros', path: '/perfil', icon: User, isLogo: false },
+                  { name: 'Panel Orientador', sub: 'Acceso con código', path: '/orientador', icon: Shield, isLogo: false },
+                  { name: 'Panel Admin', sub: 'Métricas y usuarios', path: '/admin', icon: BarChart2, isLogo: false },
+                ].map(item => (
+                  <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all"
+                    style={{
+                      background: isActive(item.path) ? 'rgba(99,210,190,0.15)' : 'transparent',
+                      border: isActive(item.path) ? '1px solid rgba(99,210,190,0.3)' : '1px solid transparent',
+                    }}>
+                    <item.icon className="w-5 h-5 flex-shrink-0"
                       style={{ color: isActive(item.path) ? '#63d2be' : 'rgba(255,255,255,0.5)' }} />
-                }
-                <div>
-                  <p className="font-semibold text-sm"
-                    style={{ color: isActive(item.path) ? '#63d2be' : 'rgba(255,255,255,0.8)' }}>
-                    {item.name}
-                  </p>
-                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{item.sub}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          {/* Grupos de navegación */}
-          <nav className="flex-1 px-4 mt-2 space-y-1">
-            {navGroups.map((group) => {
-              const isExpanded = expandedGroups[group.label]
-              return (
-                <div key={group.label} className="mb-1">
-                  <button onClick={() => toggleGroup(group.label)}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all"
-                    style={{ background: 'rgba(255,255,255,0.03)' }}>
-                    <div className="text-left">
-                      <p className={`text-xs font-black tracking-wider ${group.color}`}>{group.label}</p>
-                      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>{group.subtitle}</p>
+                    <div>
+                      <p className="font-semibold text-sm"
+                        style={{ color: isActive(item.path) ? '#63d2be' : 'rgba(255,255,255,0.8)' }}>
+                        {item.name}
+                      </p>
+                      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{item.sub}</p>
                     </div>
-                    {isExpanded
-                      ? <ChevronDown className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.2)' }} />
-                      : <ChevronRight className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.2)' }} />}
-                  </button>
+                  </Link>
+                ))}
+              </div>
 
-                  {isExpanded && (
-                    <div className="space-y-0.5 pl-2 pt-1 pb-1">
-                      {group.items.map((item) => (
-                        <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all"
-                          style={{
-                            background: isActive(item.path) ? 'rgba(99,210,190,0.12)' : 'transparent',
-                          }}>
-                          <item.icon className="w-4 h-4 flex-shrink-0"
-                            style={{ color: isActive(item.path) ? '#63d2be' : 'rgba(255,255,255,0.4)' }} />
-                          <div>
-                            <p className="font-semibold text-sm leading-tight"
-                              style={{ color: isActive(item.path) ? '#63d2be' : 'rgba(255,255,255,0.7)' }}>
-                              {item.name}
-                            </p>
-                            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{item.sub}</p>
-                          </div>
-                        </Link>
-                      ))}
+              {/* Grupos de navegación alumno */}
+              <nav className="flex-1 px-4 mt-2 space-y-1">
+                {navGroups.map((group) => {
+                  const isExpanded = expandedGroups[group.label]
+                  return (
+                    <div key={group.label} className="mb-1">
+                      <button onClick={() => toggleGroup(group.label)}
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all"
+                        style={{ background: 'rgba(255,255,255,0.03)' }}>
+                        <div className="text-left">
+                          <p className={`text-xs font-black tracking-wider ${group.color}`}>{group.label}</p>
+                          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>{group.subtitle}</p>
+                        </div>
+                        {isExpanded
+                          ? <ChevronDown className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.2)' }} />
+                          : <ChevronRight className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.2)' }} />}
+                      </button>
+                      {isExpanded && (
+                        <div className="space-y-0.5 pl-2 pt-1 pb-1">
+                          {group.items.map((item) => (
+                            <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
+                              className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all"
+                              style={{ background: isActive(item.path) ? 'rgba(99,210,190,0.12)' : 'transparent' }}>
+                              <item.icon className="w-4 h-4 flex-shrink-0"
+                                style={{ color: isActive(item.path) ? '#63d2be' : 'rgba(255,255,255,0.4)' }} />
+                              <div>
+                                <p className="font-semibold text-sm leading-tight"
+                                  style={{ color: isActive(item.path) ? '#63d2be' : 'rgba(255,255,255,0.7)' }}>
+                                  {item.name}
+                                </p>
+                                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{item.sub}</p>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              )
-            })}
-          </nav>
+                  )
+                })}
+              </nav>
+            </>
+          )}
 
           {/* Cerrar sesión */}
           <div className="px-4 pt-2 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
@@ -254,7 +277,7 @@ export default function Layout({ children }) {
               className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all"
               style={{ minWidth: 60 }}>
               <span className="text-2xl">{item.icon}</span>
-              <span className="text-xs font-600"
+              <span className="text-xs"
                 style={{ color: isActive(item.path) ? '#0d9488' : '#94a3b8', fontWeight: isActive(item.path) ? 700 : 500 }}>
                 {item.name}
               </span>
