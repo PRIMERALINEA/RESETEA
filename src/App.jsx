@@ -84,27 +84,25 @@ export default function App() {
 
         {/* ── Rutas de ALUMNO (solo alumno) ── */}
         <Route path="/"                  element={<AL><Home /></AL>} />
-        <Route path="/respiracion"       element={<AL><Respiracion /></AL>} />
-        <Route path="/anclajes"          element={<AL><Anclajes /></AL>} />
         <Route path="/diario"            element={<AL><Diario /></AL>} />
-        <Route path="/relajacion"        element={<AL><Relajacion /></AL>} />
         <Route path="/test-estres"       element={<AL><TestEstres /></AL>} />
         <Route path="/tecnicas-rapidas"  element={<AL><TecnicasRapidas /></AL>} />
         <Route path="/kit-emergencia"    element={<AL><KitEmergencia /></AL>} />
         <Route path="/rutinas"           element={<AL><Rutinas /></AL>} />
         <Route path="/escalera-calmado"  element={<AL><EscaleraCalmado /></AL>} />
-        <Route path="/grounding"         element={<AL><Grounding54321 /></AL>} />
         <Route path="/ansiedad-examenes" element={<AL><AnsiedadExamenes /></AL>} />
         <Route path="/quedo-en-blanco"   element={<AL><QuedoEnBlanco /></AL>} />
         <Route path="/sos-examen"        element={<AL><SOSExamen /></AL>} />
         <Route path="/bienestar"         element={<AL><Bienestar /></AL>} />
         <Route path="/familias"          element={<AL><ModuloFamilias /></AL>} />
 
-        {/* Rutas de alumno sin layout (pantallas inmersivas) */}
+        {/* ── Rutas compartidas (alumno y docente) ── */}
+        <Route path="/respiracion"       element={<ProtectedRoute><Layout><Respiracion /></Layout></ProtectedRoute>} />
+        <Route path="/anclajes"          element={<ProtectedRoute><Layout><Anclajes /></Layout></ProtectedRoute>} />
+        <Route path="/relajacion"        element={<ProtectedRoute><Layout><Relajacion /></Layout></ProtectedRoute>} />
+        <Route path="/grounding"         element={<ProtectedRoute><Layout><Grounding54321 /></Layout></ProtectedRoute>} />
         <Route path="/respiracion/cuadrada" element={<P><RespiracionCuadrada /></P>} />
         <Route path="/relajacion/jacobson"  element={<P><RelajacionJacobson /></P>} />
-
-        {/* ── Rutas compartidas (alumno y docente) ── */}
         <Route path="/perfil" element={<ProtectedRoute><Layout><MiPerfil /></Layout></ProtectedRoute>} />
         <Route path="/admin"  element={<ProtectedRoute><Layout><AdminDashboard /></Layout></ProtectedRoute>} />
 
