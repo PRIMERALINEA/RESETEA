@@ -178,7 +178,8 @@ export default function PanelDocente() {
       <div className="rounded-3xl p-6 text-white"
         style={{ background: 'linear-gradient(135deg, #1a2744 0%, #2d4a6b 100%)' }}>
         <div className="flex items-center gap-3 mb-2">
-          <span className="text-3xl">👩‍🏫</span>
+         <img src="https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/WhatsApp%20Image%202026-04-06%20at%2015.58.04.jpeg"
+  alt="Resetea" className="w-12 h-12 rounded-full object-cover border-2 border-white/20 shadow-md" />
           <div>
             <h1 className="text-2xl font-black">Panel Docente</h1>
             <p className="text-white/60 text-sm">Recursos para tu bienestar profesional</p>
