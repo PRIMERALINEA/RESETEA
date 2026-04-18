@@ -1,25 +1,18 @@
 // src/lib/AuthContext.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Contexto de autenticación seguro para Resetea
-// Incluye: validación de dominio, gestión de sesión, rol alumno/docente,
-// protección contra sesiones fantasma, logout limpio y detección de tokens expirados
-// ─────────────────────────────────────────────────────────────────────────────
-
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase, logError } from '@/api/supabaseClient'
 
 const DOMINIO_PERMITIDO = '@svalero.com'
-const SESSION_TIMEOUT_MS = 8 * 60 * 60 * 1000 // 8 horas
+const SESSION_TIMEOUT_MS = 8 * 60 * 60 * 1000
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser]             = useState(null)
-  const [rol, setRol]               = useState(null)   // 'alumno' | 'docente' | null
+  const [rol, setRol]               = useState(null)
   const [loading, setLoading]       = useState(true)
   const [sessionAge, setSessionAge] = useState(null)
 
-  // ── Validar dominio ──────────────────────────────────────────────────────
   const emailValido = useCallback((email) => {
     if (!email || typeof email !== 'string') return false
     return email.toLowerCase().endsWith(DOMINIO_PERMITIDO)
@@ -28,23 +21,20 @@ export function AuthProvider({ children }) {
   // ── Leer rol desde Supabase ──────────────────────────────────────────────
   const cargarRol = useCallback(async (userId) => {
     try {
-      // Primero miramos perfiles_docentes
       const { data: docente } = await supabase
         .from('perfiles_docentes')
         .select('rol')
         .eq('user_id', userId)
-        .single()
+        .maybeSingle()           // ← maybeSingle no lanza error si no hay fila
       if (docente) { setRol('docente'); return }
 
-      // Si no, miramos perfiles_alumnos
       const { data: alumno } = await supabase
         .from('perfiles_alumnos')
         .select('rol')
         .eq('user_id', userId)
-        .single()
+        .maybeSingle()
       if (alumno) { setRol(alumno.rol || 'alumno'); return }
 
-      // Sin perfil → rol por defecto
       setRol('alumno')
     } catch (e) {
       logError('cargarRol', e)
@@ -52,7 +42,6 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  // ── Logout completo ──────────────────────────────────────────────────────
   const logout = useCallback(async () => {
     try {
       Object.keys(localStorage).forEach(key => {
@@ -71,30 +60,30 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  // ── Verificar timeout ────────────────────────────────────────────────────
   const checkSessionTimeout = useCallback((session) => {
-    if (!session?.user?.created_at) return
+    if (!session?.user?.created_at) return true
     const loginTime = new Date(session.user.last_sign_in_at || session.user.created_at).getTime()
     const ahora = Date.now()
     if (ahora - loginTime > SESSION_TIMEOUT_MS) {
-      logError('session', 'Sesión expirada por tiempo')
-      logout()
-      return false
+      logout(); return false
     }
     setSessionAge(ahora - loginTime)
     return true
   }, [logout])
 
-  // ── Procesar sesión ──────────────────────────────────────────────────────
+  // ── Procesar sesión — siempre resuelve ───────────────────────────────────
   const procesarSesion = useCallback(async (session) => {
-    if (!session?.user) { setUser(null); setRol(null); return }
-    if (!emailValido(session.user.email)) {
-      logError('auth', 'Dominio de email no permitido')
-      logout(); return
+    try {
+      if (!session?.user) { setUser(null); setRol(null); return }
+      if (!emailValido(session.user.email)) { logout(); return }
+      if (!checkSessionTimeout(session)) return
+      setUser(session.user)
+      await cargarRol(session.user.id)
+    } catch (e) {
+      logError('procesarSesion', e)
+      setUser(null)
+      setRol(null)
     }
-    if (!checkSessionTimeout(session)) return
-    setUser(session.user)
-    await cargarRol(session.user.id)
   }, [emailValido, logout, checkSessionTimeout, cargarRol])
 
   // ── Inicialización ───────────────────────────────────────────────────────
@@ -105,27 +94,30 @@ export function AuthProvider({ children }) {
       try {
         const { data: { session }, error } = await supabase.auth.getSession()
         if (!mounted) return
-        if (error) { logError('getSession', error); setUser(null) }
+        if (error) { logError('getSession', error); setUser(null); setRol(null) }
         else await procesarSesion(session)
       } catch (e) {
-        logError('init', e); setUser(null)
+        logError('init', e)
+        setUser(null); setRol(null)
       } finally {
-        if (mounted) setLoading(false)
+        if (mounted) setLoading(false)  // ← SIEMPRE se ejecuta
       }
     }
 
     init()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return
       if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
-        setUser(null); setRol(null); setSessionAge(null); return
-      }
-      if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
-        await procesarSesion(session); return
+        setUser(null); setRol(null); setSessionAge(null)
+        setLoading(false)
+        return
       }
       if (event === 'PASSWORD_RECOVERY') return
-      await procesarSesion(session)
+      // Para SIGNED_IN y TOKEN_REFRESHED usamos Promise para no bloquear
+      procesarSesion(session).finally(() => {
+        if (mounted) setLoading(false)
+      })
     })
 
     const intervalId = setInterval(() => {
@@ -154,14 +146,14 @@ export function AuthProvider({ children }) {
 
   const value = {
     user,
-    rol,           // 'alumno' | 'docente' | null
+    rol,
     loading,
     logout,
     emailValido,
     sessionAge,
     isAuthenticated: !!user,
     isDocente: rol === 'docente',
-    isAlumno: rol === 'alumno',
+    isAlumno: rol === 'alumno' || rol === null,
   }
 
   return (
