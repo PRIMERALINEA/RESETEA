@@ -102,7 +102,6 @@ const GRADOS = [
   { id: 'prevencion', nivel: 'Prevención', subtitulo: 'Día a día', color: '#10b981', bg: 'rgba(16,185,129,0.06)', borde: 'rgba(16,185,129,0.2)', emoji: '🟢', desc: 'Para cuando todo va bien. Hábitos que construyen resistencia antes de que llegue el problema.', ejercicios: [
     { id: 'desconexion', emoji: '🚪', titulo: 'Ritual de desconexión al salir', duracion: '2 min', desc: 'Un cierre simbólico que separa el trabajo de tu vida personal.', pasos: ['Antes de salir del aula, para un momento y respira profundo 3 veces.', 'Haz un pequeño escáner corporal: ¿dónde tienes tensión? Suéltala conscientemente.', 'Nombra en voz baja 3 cosas que han ido bien hoy, aunque sean pequeñas.', 'Di mentalmente: "Aquí termina mi jornada. Lo que no está resuelto puede esperar."', 'Sal del aula y, si puedes, cambia físicamente de espacio antes de mirar el móvil.'] },
     { id: 'gratitud_ej', emoji: '📓', titulo: 'Diario de gratitud docente', duracion: '5 min', desc: 'Tres preguntas concretas que contrarrestan el sesgo negativo acumulado.', pasos: ['Busca un momento tranquilo al final del día.', 'Escribe o reflexiona: ¿Qué momento de hoy ha merecido la pena?', 'Pregúntate: ¿Qué alumno/a me ha sorprendido positivamente hoy?', 'Termina con: ¿Qué he hecho bien hoy como docente?', 'Hazlo durante 21 días seguidos para notar un cambio real en la perspectiva.'] },
-    { id: 'semaforo_ej', emoji: '🚦', titulo: 'Técnica del semáforo emocional', duracion: '1 min', desc: 'Una pausa de 60 segundos antes de entrar a clase que lo cambia todo.', pasos: ['Antes de entrar al aula, detente un momento fuera de la puerta.', 'Pregúntate: ¿En qué color estoy emocionalmente ahora mismo?', '🟢 Verde: estás bien, puedes entrar.', '🟡 Naranja: hay tensión. Respira profundo 3 veces antes de entrar.', '🔴 Rojo: estás muy activado/a. Tómate 60 segundos extra, bebe agua, sacude las manos.', 'Entrar en rojo tiene un coste. Un minuto de pausa lo previene.'] },
   ]},
   { id: 'tension', nivel: 'Tensión aguda', subtitulo: 'En el momento', color: '#f59e0b', bg: 'rgba(245,158,11,0.06)', borde: 'rgba(245,158,11,0.2)', emoji: '🟡', desc: 'Para cuando estás en medio de un momento difícil: conflicto, desbordamiento, agobio repentino.', ejercicios: [
     { id: 'respiracion-cuadrada', emoji: '⬜', titulo: 'Respiración cuadrada guiada', duracion: '3 min', desc: 'Técnica de regulación del sistema nervioso. Disponible con voz guiada en Resetea.', pasos: ['Accede a la respiración cuadrada desde el menú de Respiración de Resetea.', 'Si estás en clase: inhala 4 seg → retén 4 seg → exhala 4 seg → retén 4 seg.', 'Repite el ciclo entre 4 y 6 veces.', 'Puedes hacerlo con los ojos abiertos y de pie, nadie lo notará.', 'En 3 minutos tu sistema nervioso habrá bajado significativamente la activación.'], enlace: '/respiracion', botonLabel: '🎧 Abrir respiración guiada' },
@@ -369,6 +368,26 @@ export default function PanelDocente() {
               style={{ background: estadoSemaforo ? `linear-gradient(135deg, ${estadoSemaforo.color}, ${estadoSemaforo.color}cc)` : '#e2e8f0', color: estadoSemaforo ? 'white' : '#94a3b8' }}>
               {semáforoGuardado ? '✅ Estado guardado' : estadoSemaforo ? `Guardar · ${estadoSemaforo.emoji} ${estadoSemaforo.label}` : 'Selecciona tu estado'}
             </button>
+
+            {/* Instrucciones semáforo */}
+            <div className="rounded-2xl p-4 space-y-2"
+              style={{ background: 'rgba(22,163,74,0.05)', border: '1px solid rgba(22,163,74,0.15)' }}>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Cómo usarlo antes de clase</p>
+              {[
+                'Antes de entrar al aula, detente un momento fuera de la puerta.',
+                '¿En qué color estoy emocionalmente ahora mismo?',
+                '🟢 Verde: estás bien, puedes entrar.',
+                '🟡 Naranja: hay tensión. Respira profundo 3 veces antes de entrar.',
+                '🔴 Rojo: estás muy activado/a. Tómate 60 segundos extra, bebe agua, sacude las manos.',
+                'Entrar en rojo tiene un coste. Un minuto de pausa lo previene.',
+              ].map((paso, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 mt-0.5"
+                    style={{ background: '#16a34a', minWidth: 20 }}>{i + 1}</span>
+                  <p className="text-xs text-slate-600 leading-relaxed">{paso}</p>
+                </div>
+              ))}
+            </div>
 
             {/* Historial semáforo */}
             {historialSemaforo.length > 0 && (
