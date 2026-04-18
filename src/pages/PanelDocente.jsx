@@ -91,10 +91,41 @@ function getResultadoBurnout(respuestas) {
 
 // ── EJERCICIOS RELAJACIÓN ─────────────────────────────────────────────────
 const EJERCICIOS = [
-  { id: 'respiracion', emoji: '🫁', titulo: 'Respiración 4-7-8', duracion: '3 min', desc: 'Activa el sistema nervioso parasimpático y reduce la tensión acumulada.', pasos: ['Siéntate cómodamente con la espalda recta.', 'Inhala por la nariz contando mentalmente hasta 4.', 'Retén el aire contando hasta 7.', 'Exhala lentamente por la boca contando hasta 8.', 'Repite el ciclo entre 4 y 6 veces.', 'Al terminar, observa cómo tu cuerpo se ha relajado.'] },
-  { id: 'muscular', emoji: '💪', titulo: 'Relajación muscular progresiva', duracion: '8 min', desc: 'Técnica de Jacobson adaptada. Tensa y suelta grupos musculares de forma secuencial.', pasos: ['Siéntate o túmbate en un lugar tranquilo.', 'Cierra los ojos y respira profundamente 3 veces.', 'Tensa los pies durante 5 segundos. Suéltalos. Nota la diferencia.', 'Sube progresivamente: pantorrillas → muslos → abdomen → manos → brazos → hombros → cara.', 'En cada grupo: tensa 5 seg → suelta → respira → avanza al siguiente.', 'Termina respirando profundo y abriendo los ojos despacio.'] },
-  { id: 'mindfulness', emoji: '🧘', titulo: 'Pausa mindful de 5 minutos', duracion: '5 min', desc: 'Un momento de atención plena para resetear entre clase y clase.', pasos: ['Pon un temporizador en 5 minutos.', 'Cierra los ojos o baja la mirada al suelo.', 'Siente el peso de tu cuerpo en la silla. Los pies apoyados en el suelo.', 'Observa tu respiración sin cambiarla. Solo obsérvala.', 'Cuando llegue un pensamiento, nómbralo ("hay un pensamiento") y vuelve a la respiración.', 'Al sonar el temporizador, toma una respiración profunda y retoma el día.'] },
-  { id: 'grounding', emoji: '🌿', titulo: 'Grounding 5-4-3-2-1', duracion: '2 min', desc: 'Ancla tu atención al presente usando los sentidos. Ideal antes de una clase difícil.', pasos: ['Nombra mentalmente 5 cosas que puedes VER a tu alrededor.', 'Nombra 4 cosas que puedes TOCAR. Tócalas brevemente.', 'Nombra 3 cosas que puedes OÍR ahora mismo.', 'Nombra 2 cosas que puedes OLER (o que te gustaría oler).', 'Nombra 1 cosa que puedes SABOREAR.', 'Respira hondo. Ya estás en el presente.'] },
+  {
+    id: 'respiracion', emoji: '🫁', titulo: 'Respiración 4-7-8', duracion: '3 min',
+    desc: 'Activa el sistema nervioso parasimpático y reduce la tensión acumulada.',
+    pasos: ['Siéntate cómodamente con la espalda recta.', 'Inhala por la nariz contando mentalmente hasta 4.', 'Retén el aire contando hasta 7.', 'Exhala lentamente por la boca contando hasta 8.', 'Repite el ciclo entre 4 y 6 veces.', 'Al terminar, observa cómo tu cuerpo se ha relajado.'],
+    guiados: [
+      { label: '🌬️ Respiración visual guiada', ruta: '/respiracion', desc: 'Círculo animado · 3 ciclos' },
+      { label: '⬜ Respiración cuadrada con voz', ruta: '/respiracion/cuadrada', desc: 'Voz guiada · 4 ciclos de 4×4 seg' },
+    ],
+  },
+  {
+    id: 'muscular', emoji: '💪', titulo: 'Relajación muscular progresiva', duracion: '8 min',
+    desc: 'Técnica de Jacobson adaptada. Tensa y suelta grupos musculares de forma secuencial.',
+    pasos: ['Siéntate o túmbate en un lugar tranquilo.', 'Cierra los ojos y respira profundamente 3 veces.', 'Tensa los pies durante 5 segundos. Suéltalos. Nota la diferencia.', 'Sube progresivamente: pantorrillas → muslos → abdomen → manos → brazos → hombros → cara.', 'En cada grupo: tensa 5 seg → suelta → respira → avanza al siguiente.', 'Termina respirando profundo y abriendo los ojos despacio.'],
+    guiados: [
+      { label: '🎙️ Jacobson con voz guiada', ruta: '/relajacion/jacobson', desc: 'Voz ElevenLabs · ~7 min · 5 grupos musculares' },
+      { label: '⏱️ Jacobson con temporizador', ruta: '/relajacion', desc: 'Visual · contador automático por grupo' },
+    ],
+  },
+  {
+    id: 'mindfulness', emoji: '🧘', titulo: 'Pausa mindful de 5 minutos', duracion: '5 min',
+    desc: 'Un momento de atención plena para resetear entre clase y clase.',
+    pasos: ['Pon un temporizador en 5 minutos.', 'Cierra los ojos o baja la mirada al suelo.', 'Siente el peso de tu cuerpo en la silla. Los pies apoyados en el suelo.', 'Observa tu respiración sin cambiarla. Solo obsérvala.', 'Cuando llegue un pensamiento, nómbralo ("hay un pensamiento") y vuelve a la respiración.', 'Al sonar el temporizador, toma una respiración profunda y retoma el día.'],
+    guiados: [
+      { label: '🌬️ Respiración calmante guiada', ruta: '/respiracion', desc: 'Visual animada · exhala el doble que inhala' },
+    ],
+  },
+  {
+    id: 'grounding', emoji: '🌿', titulo: 'Grounding 5-4-3-2-1', duracion: '2 min',
+    desc: 'Ancla tu atención al presente usando los sentidos. Ideal antes de una clase difícil.',
+    pasos: ['Nombra mentalmente 5 cosas que puedes VER a tu alrededor.', 'Nombra 4 cosas que puedes TOCAR. Tócalas brevemente.', 'Nombra 3 cosas que puedes OÍR ahora mismo.', 'Nombra 2 cosas que puedes OLER (o que te gustaría oler).', 'Nombra 1 cosa que puedes SABOREAR.', 'Respira hondo. Ya estás en el presente.'],
+    guiados: [
+      { label: '🖐️ Técnica 5-4-3-2-1 guiada paso a paso', ruta: '/anclajes', desc: 'Pasos interactivos · con variantes de anclaje' },
+      { label: '🌱 Grounding visual completo', ruta: '/grounding', desc: 'Versión simplificada · 2 min' },
+    ],
+  },
 ]
 
 // ── GRADOS DE BURNOUT ─────────────────────────────────────────────────────
@@ -631,14 +662,36 @@ export default function PanelDocente() {
                   <Play className="w-4 h-4 text-slate-300 flex-shrink-0" />
                 </button>
                 {ejercicioAbierto === ej.id && (
-                  <div className="p-4 space-y-2 border-t" style={{ borderColor: 'rgba(0,0,0,0.05)' }}>
-                    {ej.pasos.map((paso, i) => (
-                      <div key={i} className="flex items-start gap-3">
-                        <span className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold text-white"
-                          style={{ background: '#f472b6', minWidth: 24 }}>{i + 1}</span>
-                        <p className="text-sm text-slate-600 leading-relaxed pt-0.5">{paso}</p>
+                  <div className="border-t" style={{ borderColor: 'rgba(0,0,0,0.05)' }}>
+                    {/* Pasos */}
+                    <div className="p-4 space-y-2">
+                      {ej.pasos.map((paso, i) => (
+                        <div key={i} className="flex items-start gap-3">
+                          <span className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold text-white"
+                            style={{ background: '#f472b6', minWidth: 24 }}>{i + 1}</span>
+                          <p className="text-sm text-slate-600 leading-relaxed pt-0.5">{paso}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Versiones guiadas */}
+                    {ej.guiados && ej.guiados.length > 0 && (
+                      <div className="px-4 pb-4 space-y-2">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                          🎯 Versiones guiadas disponibles
+                        </p>
+                        {ej.guiados.map((g, i) => (
+                          <Link key={i} to={g.ruta}
+                            className="flex items-center justify-between p-3 rounded-xl transition-all hover:opacity-90"
+                            style={{ background: 'linear-gradient(135deg, rgba(244,114,182,0.12), rgba(168,85,247,0.12))', border: '1px solid rgba(244,114,182,0.2)' }}>
+                            <div>
+                              <p className="text-sm font-bold" style={{ color: '#be185d' }}>{g.label}</p>
+                              <p className="text-xs text-slate-400 mt-0.5">{g.desc}</p>
+                            </div>
+                            <Play className="w-4 h-4 flex-shrink-0" style={{ color: '#f472b6' }} />
+                          </Link>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
               </div>
