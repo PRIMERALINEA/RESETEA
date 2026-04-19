@@ -182,8 +182,6 @@ export default function Layout({ children }) {
                 {[
                   { name: 'Inicio', sub: 'Panel principal', path: '/', icon: Home, isLogo: false },
                   { name: 'Mi Perfil', sub: 'Actividades y logros', path: '/perfil', icon: User, isLogo: false },
-                  { name: 'Panel Orientador', sub: 'Acceso con código', path: '/orientador', icon: Shield, isLogo: false },
-                  { name: 'Panel Admin', sub: 'Métricas y usuarios', path: '/admin', icon: BarChart2, isLogo: false },
                 ].map(item => (
                   <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
                     className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all"
