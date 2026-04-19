@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users, Activity, TrendingUp, Brain, Calendar, AlertTriangle,
   BookOpen, Heart, RefreshCw, LogOut, Eye, EyeOff,
-  BarChart2, Shield, GraduationCap, Zap
+  BarChart2, Shield, GraduationCap, Zap, Wind
 } from 'lucide-react'
 
 // ── COLORES POR TIPO ──────────────────────────────────────────
@@ -117,6 +117,10 @@ function Dashboard({ orientador, onSalir }) {
   const [docentes, setDocentes]       = useState([])
   const [loadingDocentes, setLoadingDocentes] = useState(false)
 
+  // Datos grupos
+  const [grupos, setGrupos]           = useState([])
+  const [loadingGrupos, setLoadingGrupos] = useState(false)
+
   const cargar = async (silencioso = false) => {
     if (!silencioso) setLoading(true); else setRefreshing(true)
     try {
@@ -213,8 +217,20 @@ function Dashboard({ orientador, onSalir }) {
     finally { setLoadingDocentes(false) }
   }
 
+  const cargarGrupos = async () => {
+    setLoadingGrupos(true)
+    try {
+      const { data, error } = await supabase.rpc('get_orientador_datos_por_grupo')
+      if (error) throw error
+      const parsed = typeof data === 'string' ? JSON.parse(data) : data
+      setGrupos(Array.isArray(parsed) ? parsed : [])
+    } catch (e) { console.error(e); setGrupos([]) }
+    finally { setLoadingGrupos(false) }
+  }
+
   useEffect(() => { cargar() }, [])
   useEffect(() => { if (tab === 'docentes') cargarDocentes() }, [tab])
+  useEffect(() => { if (tab === 'grupos') cargarGrupos() }, [tab])
 
   // Suscripciones realtime
   useEffect(() => {
@@ -232,6 +248,7 @@ function Dashboard({ orientador, onSalir }) {
     { id: 'herramientas', label: 'Uso',        icon: Activity },
     { id: 'ansiedad',     label: 'Ansiedad',   icon: Brain },
     { id: 'quincenal',    label: 'Quincenal',  icon: Calendar },
+    { id: 'grupos',       label: 'Grupos',     icon: BookOpen },
     { id: 'docentes',     label: 'Docentes',   icon: GraduationCap },
   ]
 
@@ -493,6 +510,148 @@ function Dashboard({ orientador, onSalir }) {
                   </div>
                 )}
               </div>
+            </motion.div>
+          )}
+
+          {/* ── GRUPOS ── */}
+          {tab === 'grupos' && (
+            <motion.div key="grupos" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+              {loadingGrupos ? (
+                <div className="flex justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                </div>
+              ) : grupos.length === 0 ? (
+                <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-slate-100">
+                  <p className="text-4xl mb-2">📚</p>
+                  <p className="font-bold text-slate-700">Sin datos de grupos aún</p>
+                  <p className="text-slate-400 text-sm mt-1">Los alumnos deben registrarse indicando su curso</p>
+                </div>
+              ) : (
+                <>
+                  {/* Alertas de grupos con ansiedad alta */}
+                  {grupos.some(g => g.ansiedad_severa > 0) && (
+                    <div className="bg-red-50 rounded-2xl p-4 border border-red-200">
+                      <p className="font-bold text-red-800 text-sm mb-2">🔴 Grupos con ansiedad severa</p>
+                      <div className="space-y-1">
+                        {grupos.filter(g => g.ansiedad_severa > 0).map(g => (
+                          <div key={g.curso} className="flex items-center justify-between text-xs bg-white rounded-xl px-3 py-2">
+                            <span className="font-bold text-slate-700">{g.curso}</span>
+                            <span className="font-black text-red-600">{g.ansiedad_severa} alumno{g.ansiedad_severa > 1 ? 's' : ''} con ansiedad severa</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tarjeta por grupo */}
+                  {grupos.map((g, i) => {
+                    const ansColor = !g.ansiedad_media ? '#64748b'
+                      : g.ansiedad_media <= 4 ? '#16a34a'
+                      : g.ansiedad_media <= 9 ? '#ca8a04'
+                      : g.ansiedad_media <= 14 ? '#ea580c'
+                      : '#dc2626'
+                    const totalSes = (g.sesiones_respiracion || 0) + (g.sesiones_relajacion || 0) + (g.sesiones_anclaje || 0)
+                    const maxSes = Math.max(g.sesiones_respiracion || 0, g.sesiones_relajacion || 0, g.sesiones_anclaje || 0, 1)
+                    const ultimaResp = g.ultima_sesion_respiracion
+                      ? new Date(g.ultima_sesion_respiracion).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+                      : '—'
+                    const ultimaRelaj = g.ultima_sesion_relajacion
+                      ? new Date(g.ultima_sesion_relajacion).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+                      : '—'
+
+                    return (
+                      <motion.div key={g.curso}
+                        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
+                        className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+
+                        {/* Cabecera grupo */}
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <p className="font-black text-slate-800 text-lg">{g.curso}</p>
+                            <p className="text-slate-400 text-xs">{g.total_alumnos} alumno{g.total_alumnos !== 1 ? 's' : ''} · {g.alumnos_con_test || 0} con test</p>
+                          </div>
+                          {g.ansiedad_severa > 0 && (
+                            <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-lg">
+                              ⚠️ {g.ansiedad_severa} severa
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Ansiedad */}
+                        <div className="mb-4">
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Ansiedad</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-slate-50 rounded-xl p-3 text-center">
+                              <p className="font-black text-xl" style={{ color: ansColor }}>
+                                {g.ansiedad_media ?? '—'}
+                              </p>
+                              <p className="text-xs text-slate-400">Media grupo</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-1">
+                              {[
+                                { label: 'Severa',   val: g.ansiedad_severa,   color: '#dc2626', bg: '#fee2e2' },
+                                { label: 'Moderada', val: g.ansiedad_moderada, color: '#ea580c', bg: '#ffedd5' },
+                                { label: 'Leve',     val: g.ansiedad_leve,     color: '#ca8a04', bg: '#fef9c3' },
+                                { label: 'Mínima',   val: g.ansiedad_minima,   color: '#16a34a', bg: '#dcfce7' },
+                              ].map(n => (
+                                <div key={n.label} className="rounded-lg p-1.5 text-center"
+                                  style={{ background: n.bg }}>
+                                  <p className="font-black text-sm" style={{ color: n.color }}>{n.val ?? 0}</p>
+                                  <p className="text-xs" style={{ color: n.color, fontSize: '9px' }}>{n.label}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Uso de técnicas */}
+                        <div className="mb-4">
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                            Uso de técnicas · {totalSes} sesiones totales
+                            {g.respiracion_semana > 0 && (
+                              <span className="ml-2 text-teal-500 normal-case font-semibold">
+                                ({g.respiracion_semana} esta semana)
+                              </span>
+                            )}
+                          </p>
+                          <div className="space-y-2">
+                            {[
+                              { label: 'Respiración', val: g.sesiones_respiracion || 0, color: '#0891b2', emoji: '🌬️', ultima: ultimaResp },
+                              { label: 'Relajación',  val: g.sesiones_relajacion  || 0, color: '#be185d', emoji: '💆', ultima: ultimaRelaj },
+                              { label: 'Anclaje',     val: g.sesiones_anclaje     || 0, color: '#1d4ed8', emoji: '⚓', ultima: null },
+                            ].map(t => (
+                              <div key={t.label}>
+                                <div className="flex items-center justify-between mb-0.5">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-sm">{t.emoji}</span>
+                                    <span className="text-xs font-medium text-slate-600">{t.label}</span>
+                                    {t.ultima && (
+                                      <span className="text-xs text-slate-300">· última: {t.ultima}</span>
+                                    )}
+                                  </div>
+                                  <span className="text-xs font-black" style={{ color: t.color }}>{t.val}</span>
+                                </div>
+                                <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                                  <motion.div initial={{ width: 0 }}
+                                    animate={{ width: `${Math.round((t.val / maxSes) * 100)}%` }}
+                                    transition={{ duration: 0.8, delay: i * 0.06 }}
+                                    className="h-full rounded-full" style={{ background: t.color }} />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                      </motion.div>
+                    )
+                  })}
+
+                  <button onClick={cargarGrupos}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl text-xs font-medium text-blue-600 bg-blue-50 border border-blue-100">
+                    <RefreshCw className="w-3.5 h-3.5" /> Actualizar datos de grupos
+                  </button>
+                </>
+              )}
             </motion.div>
           )}
 
