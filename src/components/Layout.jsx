@@ -87,7 +87,8 @@ const bottomNavDocente = [
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState({ '⚡ HERRAMIENTAS RÁPIDAS': true })
-  const { logout, isDocente } = useAuth()
+  const { logout, isDocente, user } = useAuth()
+  const isAdmin = user?.email === 'piso@svalero.com'
   const location = useLocation()
 
   const toggleGroup = (label) => setExpandedGroups(prev => ({ ...prev, [label]: !prev[label] }))
@@ -150,8 +151,10 @@ export default function Layout({ children }) {
               {[
                 { name: 'Panel Docente', sub: 'Recursos y herramientas', path: '/docentes', icon: null, isLogo: true },
                 { name: 'Mi Perfil', sub: 'Tu cuenta', path: '/perfil', icon: User, isLogo: false },
-                { name: 'Panel Orientador', sub: 'Acceso con código', path: '/orientador', icon: Shield, isLogo: false },
-                { name: 'Panel Admin', sub: 'Métricas y usuarios', path: '/admin', icon: BarChart2, isLogo: false },
+                ...(isAdmin ? [
+                  { name: 'Panel Orientador', sub: 'Acceso con código', path: '/orientador', icon: Shield, isLogo: false },
+                  { name: 'Panel Admin', sub: 'Métricas y usuarios', path: '/admin', icon: BarChart2, isLogo: false },
+                ] : []),
               ].map(item => (
                 <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
                   className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all"
