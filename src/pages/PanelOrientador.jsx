@@ -1,41 +1,34 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '@/api/supabaseClient'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
 import {
   Users, Activity, TrendingUp, Brain, Calendar, AlertTriangle,
-  BookOpen, Heart, RefreshCw, LogOut, ChevronRight, Eye, EyeOff,
-  Wind, Anchor, Zap, BarChart2, Shield, GraduationCap
+  BookOpen, Heart, RefreshCw, LogOut, Eye, EyeOff,
+  BarChart2, Shield, GraduationCap, Zap
 } from 'lucide-react'
 
-// ── COLORES ───────────────────────────────────────────────────
+// ── COLORES POR TIPO ──────────────────────────────────────────
 const TIPO_CONFIG = {
-  respiracion: { label: 'Respiración',   emoji: '🌬️', color: '#0891b2', bg: '#cffafe' },
-  anclaje:     { label: 'Anclaje',        emoji: '⚓', color: '#1d4ed8', bg: '#dbeafe' },
-  relajacion:  { label: 'Relajación',     emoji: '💆', color: '#be185d', bg: '#fce7f3' },
-  tecnica:     { label: 'Técnica rápida', emoji: '⚡', color: '#b45309', bg: '#fef3c7' },
-  diario:      { label: 'Diario',         emoji: '📓', color: '#7c3aed', bg: '#ede9fe' },
-  test:        { label: 'Test estrés',    emoji: '🧠', color: '#065f46', bg: '#d1fae5' },
+  respiracion: { label: 'Respiración',    emoji: '🌬️', color: '#0891b2' },
+  anclaje:     { label: 'Anclaje',         emoji: '⚓',  color: '#1d4ed8' },
+  relajacion:  { label: 'Relajación',      emoji: '💆',  color: '#be185d' },
+  tecnica:     { label: 'Técnica rápida',  emoji: '⚡',  color: '#b45309' },
+  diario:      { label: 'Diario',          emoji: '📓',  color: '#7c3aed' },
+  test:        { label: 'Test estrés',     emoji: '🧠',  color: '#065f46' },
 }
-const SEMAFORO = {
-  verde:    { color: '#16a34a', bg: '#dcfce7', label: 'Mínima' },
-  amarillo: { color: '#ca8a04', bg: '#fef9c3', label: 'Leve' },
-  naranja:  { color: '#ea580c', bg: '#ffedd5', label: 'Moderada' },
-  rojo:     { color: '#dc2626', bg: '#fee2e2', label: 'Severa' },
-}
-const RIESGO_COLOR = {
-  'Ansiedad severa en último test':    { color: '#dc2626', bg: '#fee2e2', icon: '🔴' },
-  'Ansiedad moderada en último test':  { color: '#ea580c', bg: '#ffedd5', icon: '🟠' },
-  'Sin actividad +14 días':            { color: '#ca8a04', bg: '#fef9c3', icon: '🟡' },
-  'Seguimiento recomendado':           { color: '#0891b2', bg: '#cffafe', icon: '🔵' },
+const NIVEL_COLOR = {
+  'Mínima (0-4)':    { color: '#16a34a', bg: '#dcfce7' },
+  'Leve (5-9)':      { color: '#ca8a04', bg: '#fef9c3' },
+  'Moderada (10-14)':{ color: '#ea580c', bg: '#ffedd5' },
+  'Severa (15+)':    { color: '#dc2626', bg: '#fee2e2' },
 }
 
-// ── LOGIN ORIENTADOR ──────────────────────────────────────────
+// ── LOGIN ─────────────────────────────────────────────────────
 function LoginOrientador({ onAcceso }) {
   const [codigo, setCodigo] = useState('')
-  const [error, setError] = useState('')
+  const [error, setError]   = useState('')
   const [loading, setLoading] = useState(false)
-  const [showCode, setShowCode] = useState(false)
+  const [show, setShow]     = useState(false)
 
   const verificar = async () => {
     if (!codigo.trim()) return
@@ -47,21 +40,16 @@ function LoginOrientador({ onAcceso }) {
         .eq('codigo', codigo.trim().toUpperCase())
         .eq('activo', true)
         .single()
-      if (error || !data) {
-        setError('Código incorrecto. Contacta con el administrador.')
-      } else {
-        onAcceso(data)
-      }
-    } catch {
-      setError('Error de conexión. Inténtalo de nuevo.')
-    } finally { setLoading(false) }
+      if (error || !data) setError('Código incorrecto. Contacta con el administrador.')
+      else onAcceso(data)
+    } catch { setError('Error de conexión. Inténtalo de nuevo.') }
+    finally { setLoading(false) }
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4"
       style={{ background: 'linear-gradient(135deg, #0d3d3d 0%, #1d4ed8 100%)' }}>
-      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-sm">
+      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
             style={{ background: 'rgba(255,255,255,0.15)' }}>
@@ -70,24 +58,17 @@ function LoginOrientador({ onAcceso }) {
           <h1 className="text-2xl font-black text-white">Panel Orientador</h1>
           <p className="text-blue-200 text-sm mt-1">Resetea · Acceso profesional</p>
         </div>
-
         <div className="bg-white rounded-3xl shadow-2xl p-6 space-y-4">
           <p className="font-bold text-slate-700">Introduce tu código de acceso</p>
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">{error}</div>
-          )}
+          {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">{error}</div>}
           <div className="relative">
-            <input
-              type={showCode ? 'text' : 'password'}
-              value={codigo}
+            <input type={show ? 'text' : 'password'} value={codigo}
               onChange={e => setCodigo(e.target.value.toUpperCase())}
               onKeyDown={e => e.key === 'Enter' && verificar()}
               placeholder="CÓDIGO DE ACCESO"
-              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-mono tracking-widest focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 pr-12"
-            />
-            <button onClick={() => setShowCode(!showCode)}
-              className="absolute right-3 top-3 text-slate-400 hover:text-slate-600">
-              {showCode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-mono tracking-widest focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 pr-12" />
+            <button onClick={() => setShow(!show)} className="absolute right-3 top-3 text-slate-400">
+              {show ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
           </div>
           <button onClick={verificar} disabled={loading || !codigo}
@@ -95,9 +76,7 @@ function LoginOrientador({ onAcceso }) {
             style={{ background: 'linear-gradient(135deg, #0d3d3d, #1d4ed8)' }}>
             {loading ? 'Verificando...' : 'Acceder al panel'}
           </button>
-          <p className="text-xs text-slate-400 text-center">
-            ¿No tienes código? Contacta con el administrador del centro.
-          </p>
+          <p className="text-xs text-slate-400 text-center">¿No tienes código? Contacta con el administrador del centro.</p>
         </div>
       </motion.div>
     </div>
@@ -105,12 +84,11 @@ function LoginOrientador({ onAcceso }) {
 }
 
 // ── KPI CARD ──────────────────────────────────────────────────
-function KpiCard({ icon: Icon, label, value, sub, color, delay }) {
+function KpiCard({ icon: Icon, label, value, sub, color, delay = 0 }) {
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}
       className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-      <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2"
-        style={{ background: color + '20' }}>
+      <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2" style={{ background: color + '20' }}>
         <Icon className="w-4 h-4" style={{ color }} />
       </div>
       <p className="text-2xl font-black text-slate-800">{value ?? '—'}</p>
@@ -120,175 +98,150 @@ function KpiCard({ icon: Icon, label, value, sub, color, delay }) {
   )
 }
 
-// ── PANEL PRINCIPAL ───────────────────────────────────────────
-function PanelOrientadorDashboard({ orientador, onSalir }) {
-  const [tab, setTab] = useState('resumen')
-  const [loading, setLoading] = useState(true)
-  const [metricas, setMetricas] = useState(null)
-  const [herramientas, setHerramientas] = useState([])
-  const [evolucion, setEvolucion] = useState([])
-  const [ansiedad, setAnsiedad] = useState([])
-  const [quincenales, setQuincenales] = useState([])
-  const [prepost, setPrepost] = useState([])
-  const [riesgo, setRiesgo] = useState([])
-  const [cursos, setCursos] = useState([])
-  const [riesgoCurso, setRiesgoCurso] = useState([])
-  const [lastUpdate, setLastUpdate] = useState(null)
-  const [autoRefresh, setAutoRefresh] = useState(true)
+// ── DASHBOARD PRINCIPAL ───────────────────────────────────────
+function Dashboard({ orientador, onSalir }) {
+  const [tab, setTab]           = useState('resumen')
+  const [loading, setLoading]   = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [lastUpdate, setLastUpdate] = useState(null)
 
-  // ── Estado docentes ──
-  const [docentes, setDocentes] = useState([])
+  // Datos alumnos
+  const [dashboard, setDashboard]     = useState(null)
+  const [porTipo, setPorTipo]         = useState([])
+  const [ansiedad, setAnsiedad]       = useState([])
+  const [quincenal, setQuincenal]     = useState(null)
+  const [sesionStats, setSesionStats] = useState(null)
+  const [usuariosActivos, setUsuariosActivos] = useState([])
+
+  // Datos docentes
+  const [docentes, setDocentes]       = useState([])
   const [loadingDocentes, setLoadingDocentes] = useState(false)
 
   const cargar = async (silencioso = false) => {
-    if (!silencioso) setLoading(true)
-    else setRefreshing(true)
+    if (!silencioso) setLoading(true); else setRefreshing(true)
     try {
-      const [r1, r2, r3, r4, r5, r6, r7, r8, r9] = await Promise.all([
-        supabase.rpc('get_orientador_metricas_generales'),
-        supabase.rpc('get_orientador_uso_herramientas'),
-        supabase.rpc('get_orientador_evolucion_semanal'),
-        supabase.rpc('get_orientador_ansiedad_grupo'),
-        supabase.rpc('get_orientador_quincenales_grupo'),
-        supabase.rpc('get_orientador_prepost_ejercicios'),
-        supabase.rpc('get_orientador_alumnos_riesgo'),
-        supabase.rpc('get_orientador_datos_por_curso'),
-        supabase.rpc('get_orientador_riesgo_por_curso'),
+      const [r1, r2, r3, r4, r5, r6] = await Promise.all([
+        supabase.rpc('get_resetea_dashboard'),
+        supabase.rpc('get_resetea_actividades_por_tipo'),
+        supabase.rpc('get_resetea_ansiedad_stats'),
+        supabase.rpc('get_resetea_eval_quincenal_stats'),
+        supabase.rpc('get_resetea_eval_sesion_stats'),
+        supabase.rpc('get_resetea_usuarios_activos'),
       ])
-      if (r1.data) setMetricas(r1.data)
-      if (r2.data) setHerramientas(r2.data)
-      if (r3.data) setEvolucion(r3.data)
-      if (r4.data) setAnsiedad(r4.data)
-      if (r5.data) setQuincenales(r5.data)
-      if (r6.data) setPrepost(r6.data)
-      if (r7.data) setRiesgo(r7.data)
-      if (r8.data) setCursos(r8.data)
-      if (r9.data) setRiesgoCurso(r9.data)
+
+      // Dashboard — devuelve objeto JSON directamente
+      if (r1.data) setDashboard(r1.data)
+
+      // Actividades por tipo — devuelve array de tuplas {tipo, count}
+      if (r2.data) setPorTipo(r2.data)
+
+      // Ansiedad — devuelve array JSON [{nivel, total, porcentaje}]
+      if (r3.data) {
+        try {
+          const parsed = typeof r3.data === 'string' ? JSON.parse(r3.data) : r3.data
+          setAnsiedad(Array.isArray(parsed) ? parsed : [])
+        } catch { setAnsiedad([]) }
+      }
+
+      // Quincenal — devuelve objeto JSON
+      if (r4.data) {
+        try {
+          setQuincenal(typeof r4.data === 'string' ? JSON.parse(r4.data) : r4.data)
+        } catch { setQuincenal(null) }
+      }
+
+      // Sesión stats — devuelve objeto JSON
+      if (r5.data) {
+        try {
+          setSesionStats(typeof r5.data === 'string' ? JSON.parse(r5.data) : r5.data)
+        } catch { setSesionStats(null) }
+      }
+
+      // Usuarios activos — devuelve array de objetos
+      if (r6.data) setUsuariosActivos(Array.isArray(r6.data) ? r6.data : [])
+
       setLastUpdate(new Date())
-    } catch (e) { console.error(e) }
+    } catch (e) { console.error('Error cargando datos orientador:', e) }
     finally { setLoading(false); setRefreshing(false) }
   }
 
-  // ── Cargar datos docentes directamente ──
   const cargarDocentes = async () => {
     setLoadingDocentes(true)
     try {
-      const hace7dias  = new Date(Date.now() - 7  * 24 * 60 * 60 * 1000).toISOString()
-      const hace30dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      const hace7  = new Date(Date.now() - 7  * 86400000).toISOString()
+      const hace30 = new Date(Date.now() - 30 * 86400000).toISOString()
 
-      // Todos los docentes registrados
       const { data: perfiles } = await supabase
-        .from('perfiles_docentes')
-        .select('user_id, created_at, centro_id')
+        .from('perfiles_docentes').select('user_id, created_at')
 
       if (!perfiles || perfiles.length === 0) { setDocentes([]); return }
 
-      const userIds = perfiles.map(p => p.user_id)
+      const ids = perfiles.map(p => p.user_id)
+      const [sResp, sRelaj, sAnclaje] = await Promise.all([
+        supabase.from('sesiones_respiracion').select('user_id, created_at').in('user_id', ids),
+        supabase.from('sesiones_relajacion').select('user_id, created_at').in('user_id', ids),
+        supabase.from('sesiones_anclaje').select('user_id, created_at').in('user_id', ids),
+      ])
 
-      // Sesiones de respiración de docentes
-      const { data: sesRespiracion } = await supabase
-        .from('sesiones_respiracion')
-        .select('user_id, created_at')
-        .in('user_id', userIds)
-
-      // Sesiones de relajación de docentes
-      const { data: sesRelajacion } = await supabase
-        .from('sesiones_relajacion')
-        .select('user_id, created_at')
-        .in('user_id', userIds)
-
-      // Sesiones de anclaje de docentes
-      const { data: sesAnclaje } = await supabase
-        .from('sesiones_anclaje')
-        .select('user_id, created_at')
-        .in('user_id', userIds)
-
-      // Construir resumen por docente (hash para privacidad)
-      const todasSesiones = [
-        ...(sesRespiracion || []).map(s => ({ ...s, tipo: 'respiracion' })),
-        ...(sesRelajacion  || []).map(s => ({ ...s, tipo: 'relajacion' })),
-        ...(sesAnclaje     || []).map(s => ({ ...s, tipo: 'anclaje' })),
+      const todas = [
+        ...(sResp.data   || []).map(s => ({ ...s, tipo: 'respiracion' })),
+        ...(sRelaj.data  || []).map(s => ({ ...s, tipo: 'relajacion' })),
+        ...(sAnclaje.data || []).map(s => ({ ...s, tipo: 'anclaje' })),
       ]
 
-      const resumen = perfiles.map(p => {
-        const sesiones = todasSesiones.filter(s => s.user_id === p.user_id)
-        const ultimaSesion = sesiones.length > 0
-          ? sesiones.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0].created_at
+      setDocentes(perfiles.map(p => {
+        const ses = todas.filter(s => s.user_id === p.user_id)
+        const ultima = ses.length > 0
+          ? ses.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0].created_at
           : null
-        const activo7  = sesiones.filter(s => s.created_at >= hace7dias).length > 0
-        const activo30 = sesiones.filter(s => s.created_at >= hace30dias).length > 0
-        const diasSinActividad = ultimaSesion
-          ? Math.floor((Date.now() - new Date(ultimaSesion)) / (1000 * 60 * 60 * 24))
-          : null
-        const usosPorTipo = {
-          respiracion: sesiones.filter(s => s.tipo === 'respiracion').length,
-          relajacion:  sesiones.filter(s => s.tipo === 'relajacion').length,
-          anclaje:     sesiones.filter(s => s.tipo === 'anclaje').length,
-        }
-        // Hash simple para privacidad
-        const hash = p.user_id.slice(0, 8)
+        const dias = ultima ? Math.floor((Date.now() - new Date(ultima)) / 86400000) : null
         return {
-          hash,
+          hash: p.user_id.slice(0, 8),
           registrado: p.created_at,
-          totalSesiones: sesiones.length,
-          ultimaSesion,
-          activo7,
-          activo30,
-          diasSinActividad,
-          usosPorTipo,
+          total: ses.length,
+          activo7:  ses.some(s => s.created_at >= hace7),
+          activo30: ses.some(s => s.created_at >= hace30),
+          dias,
+          porTipo: {
+            respiracion: ses.filter(s => s.tipo === 'respiracion').length,
+            relajacion:  ses.filter(s => s.tipo === 'relajacion').length,
+            anclaje:     ses.filter(s => s.tipo === 'anclaje').length,
+          }
         }
-      })
-
-      setDocentes(resumen)
+      }))
     } catch (e) { console.error(e) }
     finally { setLoadingDocentes(false) }
   }
 
   useEffect(() => { cargar() }, [])
+  useEffect(() => { if (tab === 'docentes') cargarDocentes() }, [tab])
 
+  // Suscripciones realtime
   useEffect(() => {
-    if (tab === 'docentes') cargarDocentes()
-  }, [tab])
-
-  useEffect(() => {
-    if (!autoRefresh) return
-    const interval = setInterval(() => cargar(true), 30000)
-    return () => clearInterval(interval)
-  }, [autoRefresh])
-
-  useEffect(() => {
-    const tablas = [
-      'sesiones_respiracion', 'sesiones_anclaje', 'sesiones_relajacion',
-      'sesiones_tecnicas', 'test_estres', 'diario_estudiante', 'evaluaciones_quincenales',
-    ]
-    const suscripciones = tablas.map(tabla =>
-      supabase
-        .channel('realtime_' + tabla)
-        .on('postgres_changes', { event: '*', schema: 'public', table: tabla }, () => cargar(true))
+    const tablas = ['sesiones_respiracion','sesiones_anclaje','sesiones_relajacion','sesiones_tecnicas','test_estres','diario_estudiante','evaluaciones_quincenales']
+    const subs = tablas.map(t =>
+      supabase.channel('rt_' + t)
+        .on('postgres_changes', { event: '*', schema: 'public', table: t }, () => cargar(true))
         .subscribe()
     )
-    return () => { suscripciones.forEach(s => supabase.removeChannel(s)) }
+    return () => subs.forEach(s => supabase.removeChannel(s))
   }, [])
 
   const TABS = [
-    { id: 'resumen',      label: 'Resumen',    icon: BarChart2 },
-    { id: 'cursos',       label: 'Cursos',     icon: BookOpen },
+    { id: 'resumen',      label: 'Resumen',   icon: BarChart2 },
     { id: 'herramientas', label: 'Uso',        icon: Activity },
     { id: 'ansiedad',     label: 'Ansiedad',   icon: Brain },
-    { id: 'quincenales',  label: 'Quincenal',  icon: Calendar },
-    { id: 'riesgo',       label: 'Atención',   icon: AlertTriangle },
+    { id: 'quincenal',    label: 'Quincenal',  icon: Calendar },
     { id: 'docentes',     label: 'Docentes',   icon: GraduationCap },
   ]
 
-  const maxHerramienta = Math.max(...herramientas.map(h => h.total), 1)
-  const maxEvolucion   = Math.max(...evolucion.map(e => e.total_actividades), 1)
+  const maxTipo = Math.max(...porTipo.map(h => h.count ?? h.total ?? 0), 1)
 
-  // Métricas rápidas docentes
+  // Métricas docentes
   const docentesActivos7  = docentes.filter(d => d.activo7).length
   const docentesActivos30 = docentes.filter(d => d.activo30).length
-  const totalSesionesDoc  = docentes.reduce((a, d) => a + d.totalSesiones, 0)
-  const sinActividad14    = docentes.filter(d => d.diasSinActividad === null || d.diasSinActividad > 14).length
+  const totalSesDoc = docentes.reduce((a, d) => a + d.total, 0)
+  const sinActiv14  = docentes.filter(d => d.dias === null || d.dias > 14).length
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-4">
@@ -301,26 +254,11 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
             <p className="font-black text-slate-800">Panel Orientador</p>
             {refreshing && <RefreshCw className="w-3.5 h-3.5 text-teal-500 animate-spin" />}
           </div>
-          <div className="flex items-center gap-2 mt-0.5">
-            <p className="text-slate-500 text-xs">
-              {orientador.centro} · Actualizado: {lastUpdate?.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-            </p>
-            <div className="flex items-center gap-1">
-              <div className="w-1.5 h-1.5 rounded-full animate-pulse"
-                style={{ background: autoRefresh ? '#16a34a' : '#94a3b8' }} />
-              <span className="text-xs" style={{ color: autoRefresh ? '#16a34a' : '#94a3b8' }}>
-                {autoRefresh ? 'En vivo' : 'Pausado'}
-              </span>
-            </div>
-          </div>
+          <p className="text-slate-500 text-xs mt-0.5">
+            {orientador.centro} · {lastUpdate ? `Actualizado: ${lastUpdate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}` : 'Cargando...'}
+          </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setAutoRefresh(!autoRefresh)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium"
-            style={{ background: autoRefresh ? '#dcfce7' : '#fee2e2', color: autoRefresh ? '#16a34a' : '#dc2626' }}>
-            <div className="w-2 h-2 rounded-full" style={{ background: autoRefresh ? '#16a34a' : '#94a3b8' }} />
-            {autoRefresh ? 'En vivo' : 'Pausado'}
-          </button>
           <button onClick={() => cargar(false)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-teal-600 bg-teal-50">
             <RefreshCw className="w-3.5 h-3.5" />
@@ -336,7 +274,7 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
       <div className="bg-blue-50 rounded-2xl p-3 mb-4 flex items-start gap-2 border border-blue-100">
         <Shield className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
         <p className="text-blue-700 text-xs leading-relaxed">
-          Todos los datos son <strong>anónimos y agregados</strong>. No se identifican usuarios individuales. Los hashes son irreversibles.
+          Todos los datos son <strong>anónimos y agregados</strong>. No se identifican usuarios individuales.
         </p>
       </div>
 
@@ -348,15 +286,10 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
             style={{
               background: tab === t.id ? 'linear-gradient(135deg, #0d3d3d, #1d4ed8)' : 'white',
               color: tab === t.id ? 'white' : '#64748b',
-              border: tab === t.id ? 'none' : '1px solid #e2e8f0'
+              border: tab === t.id ? 'none' : '1px solid #e2e8f0',
             }}>
             <t.icon className="w-3.5 h-3.5" />
             {t.label}
-            {t.id === 'riesgo' && riesgo.length > 0 && (
-              <span className="w-4 h-4 rounded-full bg-red-500 text-white text-xs flex items-center justify-center ml-0.5">
-                {riesgo.length}
-              </span>
-            )}
           </button>
         ))}
       </div>
@@ -368,226 +301,42 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
       ) : (
         <AnimatePresence mode="wait">
 
-          {/* ── CURSOS ── */}
-          {tab === 'cursos' && (
-            <motion.div key="cursos" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-              className="space-y-4">
-              {cursos.length === 0 ? (
-                <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-slate-100">
-                  <p className="text-4xl mb-2">📚</p>
-                  <p className="font-bold text-slate-700">Sin datos de cursos aún</p>
-                  <p className="text-slate-400 text-sm mt-1">Los alumnos deben registrarse indicando su curso</p>
-                </div>
-              ) : (
-                cursos.map((c, i) => {
-                  const ansiedadColor = !c.ansiedad_media ? '#64748b' : c.ansiedad_media <= 4 ? '#16a34a' : c.ansiedad_media <= 9 ? '#ca8a04' : '#dc2626'
-                  const riesgos = riesgoCurso.filter(r => r.curso === c.curso)
-                  return (
-                    <motion.div key={c.curso} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-                      className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <p className="font-black text-slate-800 text-lg">{c.curso}</p>
-                          <p className="text-slate-400 text-xs">{c.total_alumnos} alumno{c.total_alumnos !== 1 ? 's' : ''} registrados</p>
-                        </div>
-                        {riesgos.length > 0 && (
-                          <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-lg">
-                            ⚠️ {riesgos.length} en atención
-                          </span>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-3 gap-3 mb-3">
-                        <div className="bg-slate-50 rounded-xl p-3 text-center">
-                          <p className="font-black text-slate-800 text-lg">{c.alumnos_activos_semana}</p>
-                          <p className="text-slate-400 text-xs">Activos semana</p>
-                        </div>
-                        <div className="bg-slate-50 rounded-xl p-3 text-center">
-                          <p className="font-black text-slate-800 text-lg">{c.total_actividades}</p>
-                          <p className="text-slate-400 text-xs">Actividades</p>
-                        </div>
-                        <div className="bg-slate-50 rounded-xl p-3 text-center">
-                          <p className="font-black text-lg" style={{ color: ansiedadColor }}>{c.ansiedad_media ?? '—'}</p>
-                          <p className="text-slate-400 text-xs">Ansiedad media</p>
-                        </div>
-                      </div>
-                      {(c.bienestar_medio || c.rumiacion_media) && (
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="flex items-center gap-2 bg-green-50 rounded-xl p-2">
-                            <span className="text-sm">✨</span>
-                            <div>
-                              <p className="font-black text-green-700 text-sm">{c.bienestar_medio}</p>
-                              <p className="text-green-600 text-xs">Bienestar</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 bg-violet-50 rounded-xl p-2">
-                            <span className="text-sm">🔄</span>
-                            <div>
-                              <p className="font-black text-violet-700 text-sm">{c.rumiacion_media}</p>
-                              <p className="text-violet-600 text-xs">Rumiación</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      {riesgos.length > 0 && (
-                        <div className="mt-3 space-y-1">
-                          <p className="text-xs font-bold text-slate-500">Alumnos que necesitan atención:</p>
-                          {riesgos.map((r, j) => (
-                            <div key={j} className="flex items-center gap-2 bg-red-50 rounded-lg p-2">
-                              <span className="text-xs">{r.ultimo_test >= 15 ? '🔴' : r.ultimo_test >= 10 ? '🟠' : '🟡'}</span>
-                              <p className="text-xs text-red-700 flex-1">{r.motivo}</p>
-                              <p className="text-xs font-mono text-slate-400">{r.alumno_hash.slice(0,6)}...</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </motion.div>
-                  )
-                })
-              )}
-            </motion.div>
-          )}
-
           {/* ── RESUMEN ── */}
           {tab === 'resumen' && (
-            <motion.div key="resumen" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-              className="space-y-5">
+            <motion.div key="resumen" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
               <div className="grid grid-cols-2 gap-3">
-                <KpiCard icon={Users}      label="Alumnos registrados"   value={metricas?.total_usuarios}          color="#0f6b6b" delay={0.05} />
-                <KpiCard icon={Activity}   label="Actividades totales"    value={metricas?.total_actividades}       color="#7c3aed" delay={0.1}  />
-                <KpiCard icon={Calendar}   label="Activos esta semana"    value={metricas?.usuarios_activos_semana} color="#0891b2" delay={0.15} sub="Últimos 7 días" />
-                <KpiCard icon={TrendingUp} label="Activos este mes"       value={metricas?.usuarios_activos_mes}    color="#b45309" delay={0.2}  sub="Últimos 30 días" />
-                <KpiCard icon={Brain}      label="Tests completados"      value={metricas?.tests_completados}       color="#be185d" delay={0.25} />
-                <KpiCard icon={Heart}      label="Ansiedad media grupo"   value={metricas?.ansiedad_promedio != null ? `${metricas.ansiedad_promedio} pts` : '—'} color="#dc2626" delay={0.3} sub="GAD-7" />
+                <KpiCard icon={Users}      label="Usuarios registrados"  value={dashboard?.total_usuarios}          color="#0f6b6b" delay={0.05} />
+                <KpiCard icon={Activity}   label="Actividades totales"    value={dashboard?.total_actividades}       color="#7c3aed" delay={0.1} />
+                <KpiCard icon={Calendar}   label="Actividades hoy"        value={dashboard?.actividades_hoy}         color="#0891b2" delay={0.15} />
+                <KpiCard icon={TrendingUp} label="Usuarios activos (7d)"  value={usuariosActivos.length}             color="#b45309" delay={0.2} sub="Últimos 7 días" />
               </div>
-              {metricas?.mejoria_promedio_pre_post && (
-                <div className="bg-green-50 rounded-2xl p-4 border border-green-100">
-                  <p className="font-bold text-green-800 text-sm mb-1">📈 Eficacia de las técnicas</p>
-                  <p className="text-green-700 text-sm">
-                    Reducción media de malestar tras usar una técnica:
-                    <span className="font-black text-lg ml-2">{metricas.mejoria_promedio_pre_post} pts</span>
-                  </p>
-                  <p className="text-green-600 text-xs mt-1">Basado en evaluaciones pre/post de los alumnos</p>
-                </div>
-              )}
-              {evolucion.length > 0 && (
-                <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-                  <p className="font-black text-slate-800 mb-4">Actividad semanal (últimas 10 semanas)</p>
-                  <div className="flex items-end gap-1 h-24">
-                    {evolucion.map((e, i) => {
-                      const pct = (e.total_actividades / maxEvolucion) * 100
-                      const fecha = new Date(e.semana)
-                      return (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-                          <span className="text-teal-600 font-black" style={{ fontSize: '8px' }}>
-                            {e.total_actividades > 0 ? e.total_actividades : ''}
-                          </span>
-                          <motion.div initial={{ height: 0 }} animate={{ height: `${Math.max(pct, 4)}%` }}
-                            transition={{ duration: 0.6, delay: i * 0.05 }}
-                            className="w-full rounded-t-lg" style={{ background: '#1d4ed8', minHeight: '4px' }} />
-                          <span className="text-slate-400" style={{ fontSize: '7px' }}>
-                            {fecha.getDate()}/{fecha.getMonth() + 1}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          )}
 
-          {/* ── USO HERRAMIENTAS ── */}
-          {tab === 'herramientas' && (
-            <motion.div key="herramientas" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-              className="space-y-4">
-              <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-                <p className="font-black text-slate-800 mb-4">Uso por herramienta</p>
-                <div className="space-y-4">
-                  {herramientas.map(h => {
-                    const cfg = TIPO_CONFIG[h.tipo] || TIPO_CONFIG.tecnica
-                    const pct = Math.round((h.total / maxHerramienta) * 100)
-                    return (
-                      <div key={h.tipo}>
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <span>{cfg.emoji}</span>
-                            <span className="text-sm font-medium text-slate-700">{cfg.label}</span>
-                          </div>
-                          <div className="flex gap-3 text-xs">
-                            <span className="text-slate-400">{h.usuarios_unicos} usuarios</span>
-                            <span className="font-black" style={{ color: cfg.color }}>{h.total} usos</span>
-                          </div>
-                        </div>
-                        <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                            transition={{ duration: 0.8 }}
-                            className="h-full rounded-full" style={{ background: cfg.color }} />
-                        </div>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          Esta semana: <span className="font-bold" style={{ color: cfg.color }}>{h.ultima_semana}</span>
-                        </p>
+              {/* Métricas adicionales del dashboard */}
+              {dashboard && (
+                <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 space-y-3">
+                  <p className="font-black text-slate-800">Desglose de actividad</p>
+                  {Object.entries(dashboard)
+                    .filter(([k]) => !['total_usuarios', 'total_actividades', 'actividades_hoy'].includes(k))
+                    .map(([k, v]) => (
+                      <div key={k} className="flex items-center justify-between py-1 border-b border-slate-50 last:border-0">
+                        <p className="text-sm text-slate-600 capitalize">{k.replace(/_/g, ' ')}</p>
+                        <p className="font-black text-slate-800">{v ?? '—'}</p>
                       </div>
-                    )
-                  })}
+                    ))}
                 </div>
-              </div>
-            </motion.div>
-          )}
+              )}
 
-          {/* ── ANSIEDAD ── */}
-          {tab === 'ansiedad' && (
-            <motion.div key="ansiedad" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-              className="space-y-4">
-              <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-                <div className="flex items-center gap-2 mb-4">
-                  <Brain className="w-5 h-5 text-rose-500" />
-                  <p className="font-black text-slate-800">Distribución de ansiedad (GAD-7)</p>
-                </div>
-                {ansiedad.length === 0 ? (
-                  <p className="text-slate-400 text-sm text-center py-4">Sin tests completados aún</p>
-                ) : (
-                  <div className="space-y-3">
-                    {ansiedad.map(a => {
-                      const sem = SEMAFORO[a.color_semaforo] || SEMAFORO.verde
-                      return (
-                        <div key={a.nivel} className="flex items-center gap-3">
-                          <span className="text-xs font-bold px-2 py-1 rounded-lg w-32 text-center flex-shrink-0"
-                            style={{ color: sem.color, background: sem.bg }}>{a.nivel}</span>
-                          <div className="flex-1 h-2.5 rounded-full bg-slate-100 overflow-hidden">
-                            <motion.div initial={{ width: 0 }} animate={{ width: `${a.porcentaje}%` }}
-                              transition={{ duration: 0.8 }}
-                              className="h-full rounded-full" style={{ background: sem.color }} />
-                          </div>
-                          <span className="text-sm font-black w-20 text-right flex-shrink-0"
-                            style={{ color: sem.color }}>
-                            {a.total} ({a.porcentaje}%)
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-              {prepost.length > 0 && (
+              {/* Usuarios activos recientes */}
+              {usuariosActivos.length > 0 && (
                 <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-                  <p className="font-black text-slate-800 mb-1">Eficacia pre/post por ejercicio</p>
-                  <p className="text-slate-400 text-xs mb-4">Reducción media de malestar (0-10)</p>
-                  <div className="space-y-3">
-                    {prepost.map((p, i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-slate-700 truncate">{p.ejercicio_nombre}</p>
-                          <div className="flex gap-2 text-xs text-slate-400 mt-0.5">
-                            <span>✅ Sí: {p.pct_ayudo_si}%</span>
-                            <span>🟡 Algo: {p.pct_ayudo_algo}%</span>
-                            <span>❌ No: {p.pct_ayudo_no}%</span>
-                          </div>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="font-black text-lg" style={{ color: p.mejoria_media > 0 ? '#16a34a' : '#dc2626' }}>
-                            {p.mejoria_media > 0 ? '-' : '+'}{Math.abs(p.mejoria_media)}
-                          </p>
-                          <p className="text-xs text-slate-400">{p.total_sesiones} usos</p>
+                  <p className="font-black text-slate-800 mb-3">Usuarios activos recientes</p>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {usuariosActivos.slice(0, 10).map((u, i) => (
+                      <div key={i} className="flex items-center justify-between text-xs py-1.5 border-b border-slate-50 last:border-0">
+                        <p className="font-mono text-slate-400">{String(u.user_id || u[0] || '').slice(0, 8)}...</p>
+                        <div className="flex gap-3">
+                          <span className="text-slate-500">{u.count ?? u[1] ?? 0} sesiones</span>
+                          <span className="text-slate-400">{u.last_activity ?? u[2] ? new Date(u.last_activity ?? u[2]).toLocaleDateString('es-ES') : '—'}</span>
                         </div>
                       </div>
                     ))}
@@ -597,189 +346,196 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
             </motion.div>
           )}
 
-          {/* ── QUINCENALES ── */}
-          {tab === 'quincenales' && (
-            <motion.div key="quincenales" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-              className="space-y-4">
+          {/* ── USO POR HERRAMIENTA ── */}
+          {tab === 'herramientas' && (
+            <motion.div key="herramientas" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
               <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-                <p className="font-black text-slate-800 mb-1">Evaluaciones quincenales del grupo</p>
-                <p className="text-slate-400 text-xs mb-4">Escala 1-5 · Promedio del grupo por semana</p>
-                {quincenales.length === 0 ? (
-                  <p className="text-slate-400 text-sm text-center py-4">Sin evaluaciones completadas aún</p>
+                <p className="font-black text-slate-800 mb-4">Uso por herramienta</p>
+                {porTipo.length === 0 ? (
+                  <p className="text-slate-400 text-sm text-center py-4">Sin datos de uso aún</p>
                 ) : (
-                  <>
-                    {(() => {
-                      const ultima = quincenales[quincenales.length - 1]
+                  <div className="space-y-4">
+                    {porTipo.map((h, i) => {
+                      const tipo = h.tipo ?? h[0]
+                      const total = h.count ?? h.total ?? h[1] ?? 0
+                      const cfg = TIPO_CONFIG[tipo] || { label: tipo, emoji: '📱', color: '#64748b' }
+                      const pct = Math.round((total / maxTipo) * 100)
                       return (
-                        <div className="grid grid-cols-2 gap-3 mb-5">
-                          {[
-                            { label: 'Rumiación',          val: ultima.rumiacion_media,  inv: true,  emoji: '🔄', desc: 'Menos es mejor' },
-                            { label: 'Atención presente',  val: ultima.atencion_media,   inv: false, emoji: '🎯', desc: 'Más es mejor' },
-                            { label: 'Capacidad de calma', val: ultima.calma_media,      inv: false, emoji: '🌊', desc: 'Más es mejor' },
-                            { label: 'Bienestar general',  val: ultima.bienestar_media,  inv: false, emoji: '✨', desc: 'Más es mejor' },
-                          ].map(({ label, val, inv, emoji, desc }) => {
-                            const score = parseFloat(val)
-                            const bueno = inv ? score <= 2.5 : score >= 3.5
-                            const color = bueno ? '#16a34a' : score >= 3 ? '#ca8a04' : '#dc2626'
-                            return (
-                              <div key={label} className="bg-slate-50 rounded-2xl p-3 border border-slate-100">
-                                <p className="text-lg mb-1">{emoji}</p>
-                                <p className="font-black text-xl" style={{ color }}>{val}</p>
-                                <p className="text-xs font-medium text-slate-700">{label}</p>
-                                <p className="text-xs text-slate-400">{desc}</p>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )
-                    })()}
-                    <p className="font-bold text-slate-700 text-sm mb-2">Evolución por semanas</p>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="text-slate-400">
-                            <th className="text-left py-1 pr-2">Semana</th>
-                            <th className="text-center py-1 px-1">🔄</th>
-                            <th className="text-center py-1 px-1">🎯</th>
-                            <th className="text-center py-1 px-1">🌊</th>
-                            <th className="text-center py-1 px-1">✨</th>
-                            <th className="text-center py-1 px-1">N</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {quincenales.map((q, i) => {
-                            const fecha = new Date(q.semana)
-                            return (
-                              <tr key={i} className="border-t border-slate-50">
-                                <td className="py-1.5 pr-2 text-slate-500">{fecha.getDate()}/{fecha.getMonth() + 1}</td>
-                                <td className="text-center py-1.5 px-1 font-bold" style={{ color: q.rumiacion_media <= 2.5 ? '#16a34a' : '#dc2626' }}>{q.rumiacion_media}</td>
-                                <td className="text-center py-1.5 px-1 font-bold" style={{ color: q.atencion_media >= 3.5 ? '#16a34a' : '#dc2626' }}>{q.atencion_media}</td>
-                                <td className="text-center py-1.5 px-1 font-bold" style={{ color: q.calma_media >= 3.5 ? '#16a34a' : '#dc2626' }}>{q.calma_media}</td>
-                                <td className="text-center py-1.5 px-1 font-bold" style={{ color: q.bienestar_media >= 3.5 ? '#16a34a' : '#dc2626' }}>{q.bienestar_media}</td>
-                                <td className="text-center py-1.5 px-1 text-slate-400">{q.respuestas}</td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                )}
-              </div>
-            </motion.div>
-          )}
-
-          {/* ── ALUMNOS EN RIESGO ── */}
-          {tab === 'riesgo' && (
-            <motion.div key="riesgo" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-              className="space-y-4">
-              <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100">
-                <p className="font-bold text-amber-800 text-sm mb-1">⚠️ Sobre esta sección</p>
-                <p className="text-amber-700 text-xs leading-relaxed">
-                  Muestra alumnos que podrían necesitar atención basándose en sus datos anónimos. Los identificadores son hashes irreversibles — no es posible saber quién es cada alumno.
-                </p>
-              </div>
-              {riesgo.length === 0 ? (
-                <div className="bg-green-50 rounded-2xl p-6 text-center border border-green-100">
-                  <p className="text-4xl mb-2">✅</p>
-                  <p className="font-bold text-green-800">Sin alertas en este momento</p>
-                  <p className="text-green-600 text-sm mt-1">Todos los alumnos activos están dentro del rango normal</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-sm font-bold text-slate-700">{riesgo.length} alumno{riesgo.length > 1 ? 's' : ''} requieren atención</p>
-                  {riesgo.map((r, i) => {
-                    const cfg = RIESGO_COLOR[r.motivo] || RIESGO_COLOR['Seguimiento recomendado']
-                    return (
-                      <motion.div key={r.alumno_hash}
-                        initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                        className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-                        <div className="flex items-start gap-3">
-                          <span className="text-2xl flex-shrink-0">{cfg.icon}</span>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-bold px-2 py-0.5 rounded-lg"
-                                style={{ color: cfg.color, background: cfg.bg }}>{r.motivo}</span>
+                        <div key={i}>
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <span>{cfg.emoji}</span>
+                              <span className="text-sm font-medium text-slate-700">{cfg.label}</span>
                             </div>
-                            <p className="text-xs font-mono text-slate-400 mb-2">ID: {r.alumno_hash.slice(0, 8)}...</p>
-                            <div className="grid grid-cols-3 gap-2 text-xs">
-                              <div className="bg-slate-50 rounded-lg p-2 text-center">
-                                <p className="font-black text-slate-800">{r.ultimo_test_puntuacion > 0 ? r.ultimo_test_puntuacion : '—'}</p>
-                                <p className="text-slate-400">GAD-7</p>
-                              </div>
-                              <div className="bg-slate-50 rounded-lg p-2 text-center">
-                                <p className="font-black text-slate-800">{r.dias_sin_actividad}d</p>
-                                <p className="text-slate-400">Sin uso</p>
-                              </div>
-                              <div className="bg-slate-50 rounded-lg p-2 text-center">
-                                <p className="font-black text-slate-800">{r.total_sesiones}</p>
-                                <p className="text-slate-400">Sesiones</p>
-                              </div>
-                            </div>
+                            <span className="font-black text-sm" style={{ color: cfg.color }}>{total} usos</span>
+                          </div>
+                          <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                              transition={{ duration: 0.8 }}
+                              className="h-full rounded-full" style={{ background: cfg.color }} />
                           </div>
                         </div>
-                      </motion.div>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Pre/post sesión */}
+              {sesionStats && (
+                <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+                  <p className="font-black text-slate-800 mb-1">Eficacia de las sesiones</p>
+                  <p className="text-slate-400 text-xs mb-4">Evaluaciones pre/post de los usuarios</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-slate-50 rounded-2xl p-3 text-center">
+                      <p className="font-black text-xl text-slate-800">{sesionStats.total_evaluaciones ?? '—'}</p>
+                      <p className="text-xs text-slate-500">Evaluaciones</p>
+                    </div>
+                    <div className="bg-green-50 rounded-2xl p-3 text-center">
+                      <p className="font-black text-xl text-green-700">{sesionStats.mejoria_promedio ?? '—'}</p>
+                      <p className="text-xs text-green-600">Mejora media</p>
+                    </div>
+                    {sesionStats.pct_ayudo_si != null && (
+                      <>
+                        <div className="bg-emerald-50 rounded-2xl p-3 text-center">
+                          <p className="font-black text-xl text-emerald-700">{sesionStats.pct_ayudo_si}%</p>
+                          <p className="text-xs text-emerald-600">✅ Ayudó</p>
+                        </div>
+                        <div className="bg-amber-50 rounded-2xl p-3 text-center">
+                          <p className="font-black text-xl text-amber-700">{sesionStats.pct_ayudo_algo ?? '—'}%</p>
+                          <p className="text-xs text-amber-600">🟡 Algo</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
             </motion.div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════
-              ── DOCENTES ──
-          ══════════════════════════════════════════════════════════ */}
-          {tab === 'docentes' && (
-            <motion.div key="docentes" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-              className="space-y-4">
+          {/* ── ANSIEDAD ── */}
+          {tab === 'ansiedad' && (
+            <motion.div key="ansiedad" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+              <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+                <div className="flex items-center gap-2 mb-4">
+                  <Brain className="w-5 h-5 text-rose-500" />
+                  <p className="font-black text-slate-800">Distribución de ansiedad (Test estrés)</p>
+                </div>
+                {ansiedad.length === 0 ? (
+                  <p className="text-slate-400 text-sm text-center py-4">Sin tests completados aún</p>
+                ) : (
+                  <div className="space-y-3">
+                    {ansiedad.map((a, i) => {
+                      const cfg = NIVEL_COLOR[a.nivel] || { color: '#64748b', bg: '#f1f5f9' }
+                      const pct = a.porcentaje ?? 0
+                      return (
+                        <div key={i} className="flex items-center gap-3">
+                          <span className="text-xs font-bold px-2 py-1 rounded-lg w-36 text-center flex-shrink-0"
+                            style={{ color: cfg.color, background: cfg.bg }}>{a.nivel}</span>
+                          <div className="flex-1 h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                              transition={{ duration: 0.8 }}
+                              className="h-full rounded-full" style={{ background: cfg.color }} />
+                          </div>
+                          <span className="text-sm font-black w-24 text-right flex-shrink-0"
+                            style={{ color: cfg.color }}>
+                            {a.total} ({pct}%)
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
 
+          {/* ── QUINCENAL ── */}
+          {tab === 'quincenal' && (
+            <motion.div key="quincenal" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+              <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+                <p className="font-black text-slate-800 mb-1">Evaluaciones quincenales del grupo</p>
+                <p className="text-slate-400 text-xs mb-4">Escala 1-5 · Promedio del grupo</p>
+                {!quincenal ? (
+                  <p className="text-slate-400 text-sm text-center py-4">Sin evaluaciones completadas aún</p>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { label: 'Total evaluaciones', val: quincenal.total_evaluaciones, emoji: '📋', color: '#6366f1' },
+                        { label: 'Rumiación media',    val: quincenal.rumiacion_promedio,  emoji: '🔄', color: '#dc2626', inv: true },
+                        { label: 'Atención presente',  val: quincenal.atencion_promedio ?? quincenal.atencion_pro, emoji: '🎯', color: '#16a34a' },
+                        { label: 'Calma',              val: quincenal.calma_promedio,      emoji: '🌊', color: '#0891b2' },
+                        { label: 'Bienestar',          val: quincenal.bienestar_promedio,  emoji: '✨', color: '#f59e0b' },
+                      ].filter(i => i.val != null).map(({ label, val, emoji, color, inv }) => {
+                        const score = parseFloat(val)
+                        const bueno = inv ? score <= 2.5 : score >= 3.5
+                        const c = isNaN(score) ? color : bueno ? '#16a34a' : score >= 3 ? '#ca8a04' : '#dc2626'
+                        return (
+                          <div key={label} className="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                            <p className="text-lg mb-1">{emoji}</p>
+                            <p className="font-black text-xl" style={{ color: c }}>{val}</p>
+                            <p className="text-xs font-medium text-slate-700">{label}</p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {/* Mostrar todos los campos del objeto */}
+                    <div className="bg-slate-50 rounded-2xl p-4">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Todos los datos</p>
+                      {Object.entries(quincenal).map(([k, v]) => (
+                        <div key={k} className="flex justify-between text-xs py-1 border-b border-slate-100 last:border-0">
+                          <span className="text-slate-500 capitalize">{k.replace(/_/g, ' ')}</span>
+                          <span className="font-bold text-slate-700">{v ?? '—'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── DOCENTES ── */}
+          {tab === 'docentes' && (
+            <motion.div key="docentes" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
               {loadingDocentes ? (
                 <div className="flex justify-center py-12">
                   <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
                 </div>
               ) : (
                 <>
-                  {/* KPIs docentes */}
                   <div className="grid grid-cols-2 gap-3">
                     <KpiCard icon={GraduationCap} label="Docentes registrados"  value={docentes.length}      color="#6366f1" delay={0.05} />
-                    <KpiCard icon={Activity}      label="Sesiones totales"       value={totalSesionesDoc}    color="#f97316" delay={0.1}  />
-                    <KpiCard icon={Calendar}      label="Activos esta semana"    value={docentesActivos7}    color="#0891b2" delay={0.15} sub="Últimos 7 días" />
-                    <KpiCard icon={TrendingUp}    label="Activos este mes"       value={docentesActivos30}   color="#10b981" delay={0.2}  sub="Últimos 30 días" />
+                    <KpiCard icon={Activity}      label="Sesiones totales"       value={totalSesDoc}          color="#f97316" delay={0.1} />
+                    <KpiCard icon={Calendar}      label="Activos esta semana"    value={docentesActivos7}     color="#0891b2" delay={0.15} sub="Últimos 7 días" />
+                    <KpiCard icon={TrendingUp}    label="Activos este mes"       value={docentesActivos30}    color="#10b981" delay={0.2}  sub="Últimos 30 días" />
                   </div>
 
-                  {/* Alerta sin actividad */}
-                  {sinActividad14 > 0 && (
+                  {sinActiv14 > 0 && (
                     <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100 flex items-start gap-3">
                       <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                       <div>
                         <p className="font-bold text-amber-800 text-sm">
-                          {sinActividad14} docente{sinActividad14 > 1 ? 's' : ''} sin actividad en +14 días
+                          {sinActiv14} docente{sinActiv14 > 1 ? 's' : ''} sin actividad en +14 días
                         </p>
-                        <p className="text-amber-700 text-xs mt-0.5">
-                          Podría ser útil contactar para valorar si necesitan apoyo o tienen dificultades con la app.
-                        </p>
+                        <p className="text-amber-700 text-xs mt-0.5">Podría ser útil contactar para valorar si necesitan apoyo.</p>
                       </div>
                     </div>
                   )}
 
-                  {/* Uso por tipo de herramienta */}
+                  {/* Uso por herramienta docentes */}
                   {docentes.length > 0 && (
                     <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
                       <p className="font-black text-slate-800 mb-4">Uso por herramienta (docentes)</p>
                       <div className="space-y-3">
                         {[
                           { tipo: 'respiracion', label: 'Respiración', emoji: '🌬️', color: '#0891b2' },
-                          { tipo: 'relajacion',  label: 'Relajación',  emoji: '💆', color: '#be185d' },
-                          { tipo: 'anclaje',     label: 'Anclaje',     emoji: '⚓', color: '#1d4ed8' },
+                          { tipo: 'relajacion',  label: 'Relajación',  emoji: '💆',  color: '#be185d' },
+                          { tipo: 'anclaje',     label: 'Anclaje',     emoji: '⚓',  color: '#1d4ed8' },
                         ].map(h => {
-                          const total = docentes.reduce((a, d) => a + (d.usosPorTipo[h.tipo] || 0), 0)
-                          const maxTotal = Math.max(
-                            docentes.reduce((a, d) => a + (d.usosPorTipo.respiracion || 0), 0),
-                            docentes.reduce((a, d) => a + (d.usosPorTipo.relajacion  || 0), 0),
-                            docentes.reduce((a, d) => a + (d.usosPorTipo.anclaje     || 0), 0),
-                            1
-                          )
-                          const pct = Math.round((total / maxTotal) * 100)
+                          const total = docentes.reduce((a, d) => a + (d.porTipo[h.tipo] || 0), 0)
+                          const maxT  = Math.max(...['respiracion','relajacion','anclaje'].map(t => docentes.reduce((a, d) => a + (d.porTipo[t] || 0), 0)), 1)
                           return (
                             <div key={h.tipo}>
                               <div className="flex items-center justify-between mb-1">
@@ -790,7 +546,7 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
                                 <span className="font-black text-sm" style={{ color: h.color }}>{total} usos</span>
                               </div>
                               <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                                <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                                <motion.div initial={{ width: 0 }} animate={{ width: `${Math.round((total / maxT) * 100)}%` }}
                                   transition={{ duration: 0.8 }}
                                   className="h-full rounded-full" style={{ background: h.color }} />
                               </div>
@@ -801,11 +557,10 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
                     </div>
                   )}
 
-                  {/* Listado individual docentes */}
+                  {/* Listado individual */}
                   <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
                     <p className="font-black text-slate-800 mb-1">Registro individual de docentes</p>
                     <p className="text-slate-400 text-xs mb-4">Identificadores anonimizados · Solo datos de uso</p>
-
                     {docentes.length === 0 ? (
                       <div className="text-center py-8">
                         <p className="text-4xl mb-2">👩‍🏫</p>
@@ -815,45 +570,38 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
                     ) : (
                       <div className="space-y-3">
                         {docentes.map((d, i) => {
-                          const actividadColor = d.diasSinActividad === null ? '#94a3b8'
-                            : d.diasSinActividad <= 7  ? '#16a34a'
-                            : d.diasSinActividad <= 14 ? '#ca8a04'
-                            : '#dc2626'
-                          const actividadLabel = d.diasSinActividad === null ? 'Sin sesiones'
-                            : d.diasSinActividad === 0 ? 'Hoy'
-                            : `Hace ${d.diasSinActividad}d`
-                          const registradoFecha = new Date(d.registrado).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+                          const c = d.dias === null ? '#94a3b8' : d.dias <= 7 ? '#16a34a' : d.dias <= 14 ? '#ca8a04' : '#dc2626'
+                          const lbl = d.dias === null ? 'Sin sesiones' : d.dias === 0 ? 'Hoy' : `Hace ${d.dias}d`
                           return (
                             <motion.div key={d.hash}
                               initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
                               className="rounded-2xl p-4 border"
-                              style={{ borderColor: d.diasSinActividad !== null && d.diasSinActividad > 14 ? '#fca5a5' : '#e2e8f0',
-                                       background: d.diasSinActividad !== null && d.diasSinActividad > 14 ? '#fef2f2' : 'white' }}>
+                              style={{ borderColor: d.dias !== null && d.dias > 14 ? '#fca5a5' : '#e2e8f0',
+                                       background: d.dias !== null && d.dias > 14 ? '#fef2f2' : 'white' }}>
                               <div className="flex items-start justify-between mb-3">
                                 <div>
                                   <p className="font-mono text-xs text-slate-400">ID: {d.hash}...</p>
-                                  <p className="text-xs text-slate-400 mt-0.5">Registrado: {registradoFecha}</p>
+                                  <p className="text-xs text-slate-400 mt-0.5">
+                                    Registrado: {new Date(d.registrado).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                  </p>
                                 </div>
-                                <span className="text-xs font-bold px-2 py-1 rounded-lg"
-                                  style={{ color: actividadColor, background: actividadColor + '15' }}>
-                                  {actividadLabel}
-                                </span>
+                                <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ color: c, background: c + '15' }}>{lbl}</span>
                               </div>
                               <div className="grid grid-cols-4 gap-2 text-xs">
                                 <div className="bg-slate-50 rounded-xl p-2 text-center">
-                                  <p className="font-black text-slate-800">{d.totalSesiones}</p>
+                                  <p className="font-black text-slate-800">{d.total}</p>
                                   <p className="text-slate-400">Total</p>
                                 </div>
                                 <div className="bg-cyan-50 rounded-xl p-2 text-center">
-                                  <p className="font-black text-cyan-700">{d.usosPorTipo.respiracion}</p>
+                                  <p className="font-black text-cyan-700">{d.porTipo.respiracion}</p>
                                   <p className="text-cyan-500">🌬️</p>
                                 </div>
                                 <div className="bg-rose-50 rounded-xl p-2 text-center">
-                                  <p className="font-black text-rose-700">{d.usosPorTipo.relajacion}</p>
+                                  <p className="font-black text-rose-700">{d.porTipo.relajacion}</p>
                                   <p className="text-rose-400">💆</p>
                                 </div>
                                 <div className="bg-blue-50 rounded-xl p-2 text-center">
-                                  <p className="font-black text-blue-700">{d.usosPorTipo.anclaje}</p>
+                                  <p className="font-black text-blue-700">{d.porTipo.anclaje}</p>
                                   <p className="text-blue-400">⚓</p>
                                 </div>
                               </div>
@@ -879,10 +627,10 @@ function PanelOrientadorDashboard({ orientador, onSalir }) {
   )
 }
 
-// ── COMPONENTE RAÍZ ───────────────────────────────────────────
+// ── RAÍZ ─────────────────────────────────────────────────────
 export default function PanelOrientador() {
   const [orientador, setOrientador] = useState(null)
   return orientador
-    ? <PanelOrientadorDashboard orientador={orientador} onSalir={() => setOrientador(null)} />
+    ? <Dashboard orientador={orientador} onSalir={() => setOrientador(null)} />
     : <LoginOrientador onAcceso={setOrientador} />
 }
