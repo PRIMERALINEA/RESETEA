@@ -55,11 +55,11 @@ export default function AdminDashboard() {
       if (!user || user.email !== ADMIN_EMAIL) { setAcceso(false); setLoading(false); return }
       setAcceso(true)
       const [r1, r2, r3, r4, r5] = await Promise.all([
-        supabase.rpc('get_resetea_dashboard'),
-        supabase.rpc('get_resetea_actividades_por_tipo'),
+        supabase.rpc('get_resetea_dashboard',            { p_centro_id: null }),
+        supabase.rpc('get_resetea_actividades_por_tipo', { p_centro_id: null }),
         supabase.rpc('get_resetea_actividad_diaria'),
-        supabase.rpc('get_resetea_usuarios_activos'),
-        supabase.rpc('get_resetea_ansiedad_stats'),
+        supabase.rpc('get_resetea_usuarios_activos',     { p_centro_id: null }),
+        supabase.rpc('get_resetea_ansiedad_stats',       { p_centro_id: null }),
       ])
       if (r1.data) setDashboard(r1.data)
       if (r2.data) setActividades(r2.data)

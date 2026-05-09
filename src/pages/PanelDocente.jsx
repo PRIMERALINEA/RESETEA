@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Link } from 'react-router-dom'
-import { Brain, Heart, Flame, ChevronDown, ChevronUp, Play, CheckCircle, AlertTriangle, BarChart2, Sparkles, Mic, MicOff, BookOpen, History, Trash2, Square } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Brain, Heart, Flame, ChevronDown, ChevronUp, Play, CheckCircle, AlertTriangle, BarChart2, Sparkles, Mic, MicOff, BookOpen, History, Trash2, Square, Lock, Eye, EyeOff } from 'lucide-react'
 
 const LOGO_URL = 'https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/WhatsApp%20Image%202026-04-06%20at%2015.58.04.jpeg'
 
@@ -15,8 +15,8 @@ const ESTADOS_SEMAFORO = [
 
 const GRATITUD_PREGUNTAS = [
   '¿Qué momento de hoy ha merecido la pena?',
-  '¿Qué alumno/a me ha sorprendido positivamente hoy?',
-  '¿Qué he hecho bien hoy como docente?',
+  '¿Qué alumno/a o persona atendida me ha sorprendido positivamente hoy?',
+  '¿Qué he hecho bien hoy en mi jornada laboral en el centro?',
 ]
 
 // ── TEST DE ESTRÉS PSS-10 ─────────────────────────────────────────────────
@@ -44,7 +44,7 @@ function getResultadoEstres(pts) {
 }
 
 // ── CUESTIONARIO BURNOUT DOCENTE (MBI-ES) ────────────────────────────────
-const BURNOUT_PREGUNTAS = [
+const BURNOUT_PREGUNTAS_DOCENTE = [
   { texto: 'Me siento emocionalmente agotado/a por mi trabajo como docente.', dimension: 'AE' },
   { texto: 'Cuando termino mi jornada, me siento vacío/a por completo.', dimension: 'AE' },
   { texto: 'Me siento cansado/a cuando me levanto por la mañana y tengo que afrontar otro día de trabajo.', dimension: 'AE' },
@@ -60,14 +60,33 @@ const BURNOUT_PREGUNTAS = [
   { texto: 'Me siento con mucha energía en mi trabajo.', dimension: 'RP' },
   { texto: 'Puedo crear fácilmente una atmósfera relajada con mis alumnos/as.', dimension: 'RP' },
 ]
+
+// ── CUESTIONARIO BURNOUT PERSONAL NO DOCENTE (MBI-HSS) ───────────────────
+const BURNOUT_PREGUNTAS_PAS = [
+  { texto: 'Me siento emocionalmente agotado/a por mi trabajo.', dimension: 'AE' },
+  { texto: 'Cuando termino mi jornada, me siento completamente vacío/a.', dimension: 'AE' },
+  { texto: 'Me siento cansado/a cuando me levanto por la mañana y tengo que enfrentarme a otro día de trabajo.', dimension: 'AE' },
+  { texto: 'Trabajar en contacto directo con las personas que atiendo me supone un gran esfuerzo emocional.', dimension: 'AE' },
+  { texto: 'Me siento frustrado/a por mi trabajo.', dimension: 'AE' },
+  { texto: 'Siento que trato a algunas personas como si fueran objetos impersonales.', dimension: 'DP' },
+  { texto: 'Me he vuelto más insensible hacia las personas desde que trabajo aquí.', dimension: 'DP' },
+  { texto: 'Me preocupa que este trabajo me esté endureciendo emocionalmente.', dimension: 'DP' },
+  { texto: 'No me importa realmente lo que les ocurra a las personas que atiendo.', dimension: 'DP' },
+  { texto: 'Puedo comprender con facilidad cómo se sienten las personas con las que trabajo.', dimension: 'RP' },
+  { texto: 'Trato eficazmente los problemas de las personas que atiendo.', dimension: 'RP' },
+  { texto: 'Creo que estoy influyendo positivamente con mi trabajo en la vida de las personas.', dimension: 'RP' },
+  { texto: 'Me siento con mucha energía en mi trabajo.', dimension: 'RP' },
+  { texto: 'Puedo crear fácilmente un ambiente tranquilo y de confianza en mi trabajo.', dimension: 'RP' },
+]
+
 const OPCIONES_BURNOUT = [
   { label: 'Nunca', valor: 0 }, { label: 'Alguna vez', valor: 1 },
   { label: 'A veces', valor: 2 }, { label: 'Frecuente', valor: 3 }, { label: 'Siempre', valor: 4 },
 ]
 
-function getResultadoBurnout(respuestas) {
+function getResultadoBurnout(respuestas, preguntas) {
   let ae = 0, dp = 0, rp = 0, cntAE = 0, cntDP = 0, cntRP = 0
-  BURNOUT_PREGUNTAS.forEach((p, i) => {
+  preguntas.forEach((p, i) => {
     const v = respuestas[i] ?? 0
     if (p.dimension === 'AE') { ae += v; cntAE++ }
     else if (p.dimension === 'DP') { dp += v; cntDP++ }
@@ -132,15 +151,15 @@ const EJERCICIOS = [
 const GRADOS = [
   { id: 'prevencion', nivel: 'Prevención', subtitulo: 'Día a día', color: '#10b981', bg: 'rgba(16,185,129,0.06)', borde: 'rgba(16,185,129,0.2)', emoji: '🟢', desc: 'Para cuando todo va bien. Hábitos que construyen resistencia antes de que llegue el problema.', ejercicios: [
     { id: 'desconexion', emoji: '🚪', titulo: 'Ritual de desconexión al salir', duracion: '2 min', desc: 'Un cierre simbólico que separa el trabajo de tu vida personal.', pasos: ['Antes de salir del aula, para un momento y respira profundo 3 veces.', 'Haz un pequeño escáner corporal: ¿dónde tienes tensión? Suéltala conscientemente.', 'Nombra en voz baja 3 cosas que han ido bien hoy, aunque sean pequeñas.', 'Di mentalmente: "Aquí termina mi jornada. Lo que no está resuelto puede esperar."', 'Sal del aula y, si puedes, cambia físicamente de espacio antes de mirar el móvil.'] },
-    { id: 'gratitud_ej', emoji: '📓', titulo: 'Diario de gratitud docente', duracion: '5 min', desc: 'Tres preguntas concretas que contrarrestan el sesgo negativo acumulado.', pasos: ['Busca un momento tranquilo al final del día.', 'Escribe o reflexiona: ¿Qué momento de hoy ha merecido la pena?', 'Pregúntate: ¿Qué alumno/a me ha sorprendido positivamente hoy?', 'Termina con: ¿Qué he hecho bien hoy como docente?', 'Hazlo durante 21 días seguidos para notar un cambio real en la perspectiva.'] },
+    { id: 'gratitud_ej', emoji: '📓', titulo: 'Diario de gratitud docente', duracion: '5 min', desc: 'Tres preguntas concretas que contrarrestan el sesgo negativo acumulado.', pasos: ['Busca un momento tranquilo al final del día.', 'Escribe o reflexiona: ¿Qué momento de hoy ha merecido la pena?', 'Pregúntate: ¿Qué alumno/a o persona atendida me ha sorprendido positivamente hoy?', 'Termina con: ¿Qué he hecho bien hoy en mi jornada laboral en el centro?', 'Hazlo durante 21 días seguidos para notar un cambio real en la perspectiva.'] },
   ]},
   { id: 'tension', nivel: 'Tensión aguda', subtitulo: 'En el momento', color: '#f59e0b', bg: 'rgba(245,158,11,0.06)', borde: 'rgba(245,158,11,0.2)', emoji: '🟡', desc: 'Para cuando estás en medio de un momento difícil: conflicto, desbordamiento, agobio repentino.', ejercicios: [
     { id: 'respiracion-cuadrada', emoji: '⬜', titulo: 'Respiración cuadrada guiada', duracion: '3 min', desc: 'Técnica de regulación del sistema nervioso. Disponible con voz guiada en Resetea.', pasos: ['Accede a la respiración cuadrada desde el menú de Respiración de Resetea.', 'Si estás en clase: inhala 4 seg → retén 4 seg → exhala 4 seg → retén 4 seg.', 'Repite el ciclo entre 4 y 6 veces.', 'Puedes hacerlo con los ojos abiertos y de pie, nadie lo notará.', 'En 3 minutos tu sistema nervioso habrá bajado significativamente la activación.'], enlace: '/respiracion', botonLabel: '🎧 Abrir respiración guiada' },
     { id: 'stop', emoji: '✋', titulo: 'Técnica STOP', duracion: '90 seg', desc: 'Cuatro pasos para salir del piloto automático en cualquier momento.', pasos: ['S — STOP: Para lo que estás haciendo. Solo un segundo.', 'T — TAKE A BREATH: Toma una respiración lenta y profunda.', 'O — OBSERVE: Observa qué está pasando dentro de ti: ¿qué sientes? ¿qué piensas?', 'P — PROCEED: Continúa con lo que estabas haciendo, pero ahora con más consciencia.', 'Todo el proceso cabe en 90 segundos.'] },
-    { id: 'movimiento', emoji: '🙆', titulo: 'Movimiento en la silla', duracion: '2 min', desc: 'La tensión docente se acumula en hombros, cuello y mandíbula. Esto la suelta.', pasos: ['Siéntate con la espalda recta y los pies apoyados en el suelo.', 'Rotación de hombros: 5 veces hacia adelante, 5 hacia atrás. Despacio.', 'Inclinación lateral de cuello: oreja derecha hacia hombro derecho, aguanta 10 seg. Repite al otro lado.', 'Apertura de pecho: entrelaza las manos detrás de la espalda, saca pecho y respira profundo 3 veces.', 'Mandíbula: abre y cierra la boca exageradamente 5 veces.', 'Termina sacudiendo suavemente manos y muñecas durante 10 segundos.'] },
+    { id: 'movimiento', emoji: '🙆', titulo: 'Movimiento en la silla', duracion: '2 min', desc: 'La tensión acumulada se concentra en hombros, cuello y mandíbula. Esto la suelta.', pasos: ['Siéntate con la espalda recta y los pies apoyados en el suelo.', 'Rotación de hombros: 5 veces hacia adelante, 5 hacia atrás. Despacio.', 'Inclinación lateral de cuello: oreja derecha hacia hombro derecho, aguanta 10 seg. Repite al otro lado.', 'Apertura de pecho: entrelaza las manos detrás de la espalda, saca pecho y respira profundo 3 veces.', 'Mandíbula: abre y cierra la boca exageradamente 5 veces.', 'Termina sacudiendo suavemente manos y muñecas durante 10 segundos.'] },
   ]},
   { id: 'recuperacion', nivel: 'Burnout instalado', subtitulo: 'Recuperación', color: '#ef4444', bg: 'rgba(239,68,68,0.06)', borde: 'rgba(239,68,68,0.2)', emoji: '🔴', desc: 'Para cuando el agotamiento ya es crónico. Ejercicios que reconectan con el sentido y la energía.', ejercicios: [
-    { id: 'visualizacion', emoji: '🌅', titulo: 'Visualización del docente que quiero ser', duracion: '10 min', desc: 'Reconectar con la vocación original para recuperar el sentido.', pasos: ['Busca un lugar tranquilo donde no te interrumpan. Cierra los ojos.', 'Respira profundo 3 veces y deja que el cuerpo se relaje.', 'Recuerda: ¿por qué elegiste ser docente? ¿Qué te movía al principio?', 'Visualiza al docente que eras entonces: ¿cómo entrabas al aula? ¿Qué sentías?', 'Pregúntate: de esos valores y esa energía, ¿qué sigue presente hoy en ti, aunque sea en pequeño?', 'Al abrir los ojos, escribe una frase que resuma lo que quieres recuperar.'] },
+    { id: 'visualizacion', emoji: '🌅', titulo: 'Visualización del profesional que quiero ser', duracion: '10 min', desc: 'Reconectar con la vocación original para recuperar el sentido.', pasos: ['Busca un lugar tranquilo donde no te interrumpan. Cierra los ojos.', 'Respira profundo 3 veces y deja que el cuerpo se relaje.', 'Recuerda: ¿por qué elegiste este trabajo? ¿Qué te movía al principio?', 'Visualiza al profesional que eras entonces: ¿cómo llegabas al trabajo? ¿Qué sentías?', 'Pregúntate: de esos valores y esa energía, ¿qué sigue presente hoy en ti, aunque sea en pequeño?', 'Al abrir los ojos, escribe una frase que resuma lo que quieres recuperar.'] },
     { id: 'carta', emoji: '✉️', titulo: 'Carta a un alumno/a que marcó la diferencia', duracion: '15 min', desc: 'Activar la realización personal, la dimensión más dañada en el burnout avanzado.', pasos: ['Coge papel y bolígrafo (o el móvil si lo prefieres).', 'Piensa en un alumno o alumna al que hayas ayudado.', 'Escríbele una carta. No tienes que enviársela. Nadie la va a leer.', 'Cuéntale qué viste en él/ella, qué te importó, qué hiciste por él/ella.', 'Deja que salga sin censura. Puede que aparezcan emociones. Está bien.', 'Al terminar, lee la carta en voz baja. Observa qué sientes.'] },
     { id: 'recarga', emoji: '🔋', titulo: 'Protocolo de recarga de fin de semana', duracion: '20 min de planificación', desc: 'Una estructura mínima para llegar el lunes con algo de energía.', pasos: ['El viernes por la tarde: cierra la semana. ¿Qué queda pendiente? Escríbelo y déjalo en el trabajo.', 'El sábado: identifica UNA actividad que te recargue de verdad. Ponla en el calendario.', 'El domingo por la mañana: desconexión total del trabajo. Sin correos antes del mediodía.', 'El domingo por la tarde: prepara la semana en no más de 30 minutos.', 'Incluye al menos un momento de conexión social real.', 'El domingo por la noche: cierra el ordenador a una hora fija.'] },
   ]},
@@ -244,17 +263,37 @@ function useAudioRecorder() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function PanelDocente() {
+  const navigate = useNavigate()
   const [seccionAbierta, setSeccionAbierta] = useState('semaforo')
   const [ejercicioAbierto, setEjercicioAbierto] = useState(null)
   const [gradoAbierto, setGradoAbierto] = useState('prevencion')
   const [ejercGradoAbierto, setEjercGradoAbierto] = useState(null)
   const [burnoutAbierto, setBurnoutAbierto] = useState(null)
 
+  // Modal orientador
+  const [modalOrientador, setModalOrientador] = useState(false)
+  const [claveInput, setClaveInput] = useState('')
+  const [claveError, setClaveError] = useState(false)
+  const [mostrarClave, setMostrarClave] = useState(false)
+
+  const accederOrientador = () => {
+    if (claveInput.toUpperCase() === 'RESETEA2025') {
+      setModalOrientador(false)
+      setClaveInput('')
+      setClaveError(false)
+      navigate('/orientador')
+    } else {
+      setClaveError(true)
+      setTimeout(() => setClaveError(false), 2000)
+    }
+  }
+
   // Tests
   const [respEstres, setRespEstres] = useState({})
   const [resultadoEstres, setResultadoEstres] = useState(null)
   const [respBurnout, setRespBurnout] = useState({})
   const [resultadoBurnout, setResultadoBurnout] = useState(null)
+  const [versionBurnout, setVersionBurnout] = useState('docente')
 
   // Semáforo
   const [estadoSemaforo, setEstadoSemaforo] = useState(null)
@@ -316,14 +355,67 @@ export default function PanelDocente() {
     TEST_PREGUNTAS.forEach((p, i) => { const v = respEstres[i] ?? 0; total += p.inversa ? (4 - v) : v })
     setResultadoEstres(getResultadoEstres(total))
   }
-  const calcularBurnout = () => setResultadoBurnout(getResultadoBurnout(respBurnout))
+  const preguntasBurnout = versionBurnout === 'docente' ? BURNOUT_PREGUNTAS_DOCENTE : BURNOUT_PREGUNTAS_PAS
+  const calcularBurnout = () => setResultadoBurnout(getResultadoBurnout(respBurnout, preguntasBurnout))
   const estresCompleto = Object.keys(respEstres).length === TEST_PREGUNTAS.length
-  const burnoutCompleto = Object.keys(respBurnout).length === BURNOUT_PREGUNTAS.length
+  const burnoutCompleto = Object.keys(respBurnout).length === preguntasBurnout.length
   const progEstres = Math.round((Object.keys(respEstres).length / TEST_PREGUNTAS.length) * 100)
-  const progBurnout = Math.round((Object.keys(respBurnout).length / BURNOUT_PREGUNTAS.length) * 100)
+  const progBurnout = Math.round((Object.keys(respBurnout).length / preguntasBurnout.length) * 100)
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
+
+      {/* ── Modal clave orientador ── */}
+      {modalOrientador && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.6)' }}
+          onClick={() => { setModalOrientador(false); setClaveInput(''); setClaveError(false) }}>
+          <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl"
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-2xl flex items-center justify-center"
+                style={{ background: 'rgba(99,102,241,0.1)' }}>
+                <Lock className="w-5 h-5" style={{ color: '#6366f1' }} />
+              </div>
+              <div>
+                <p className="font-black text-slate-800">Panel Orientador</p>
+                <p className="text-xs text-slate-400">Introduce la clave de acceso</p>
+              </div>
+            </div>
+            <div className="relative mb-4">
+              <input
+                type={mostrarClave ? 'text' : 'password'}
+                value={claveInput}
+                onChange={e => { setClaveInput(e.target.value); setClaveError(false) }}
+                onKeyDown={e => e.key === 'Enter' && accederOrientador()}
+                placeholder="Clave de acceso"
+                className="w-full px-4 py-3 rounded-2xl border-2 text-sm font-medium outline-none pr-12 transition-all"
+                style={{ borderColor: claveError ? '#ef4444' : '#e2e8f0', background: claveError ? '#fef2f2' : '#f8fafc' }}
+                autoFocus
+              />
+              <button onClick={() => setMostrarClave(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                {mostrarClave ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            {claveError && (
+              <p className="text-xs text-red-500 font-medium mb-3 text-center">Clave incorrecta. Inténtalo de nuevo.</p>
+            )}
+            <div className="flex gap-3">
+              <button onClick={() => { setModalOrientador(false); setClaveInput(''); setClaveError(false) }}
+                className="flex-1 py-3 rounded-2xl text-sm font-bold border-2 text-slate-500"
+                style={{ borderColor: '#e2e8f0' }}>
+                Cancelar
+              </button>
+              <button onClick={accederOrientador}
+                className="flex-1 py-3 rounded-2xl text-white text-sm font-bold"
+                style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}>
+                Acceder
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Cabecera ── */}
       <div className="rounded-3xl p-6 text-white"
@@ -331,13 +423,19 @@ export default function PanelDocente() {
         <div className="flex items-center gap-3 mb-2">
           <img src={LOGO_URL} alt="Resetea" className="w-12 h-12 rounded-full object-cover border-2 border-white/20 shadow-md" />
           <div>
-            <h1 className="text-2xl font-black">Panel Docente</h1>
-            <p className="text-white/60 text-sm">Recursos para tu bienestar profesional</p>
+            <h1 className="text-2xl font-black">Panel Docente y PAS</h1>
+            <p className="text-white/60 text-sm">Recursos para el bienestar del equipo educativo</p>
           </div>
         </div>
         <p className="text-white/70 text-sm leading-relaxed mt-3">
-          Cuidas a tus estudiantes cada día. Este espacio es para cuidarte a ti.
+          Docentes, orientadores, administrativos, auxiliares... Este espacio es para cuidaros a vosotros.
         </p>
+        <button
+          onClick={() => setModalOrientador(true)}
+          className="mt-4 w-full py-2.5 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:opacity-90"
+          style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}>
+          <Lock className="w-4 h-4" /> Panel Orientador
+        </button>
       </div>
 
       {/* ══════════════════════════════════════════════════════════════
@@ -459,7 +557,7 @@ export default function PanelDocente() {
               <BookOpen className="w-5 h-5" style={{ color: '#8b5cf6' }} />
             </div>
             <div>
-              <p className="font-bold text-slate-800">Diario de gratitud docente</p>
+              <p className="font-bold text-slate-800">Diario de gratitud</p>
               <p className="text-xs text-slate-400">Escribe o graba · 3 preguntas · Historial</p>
             </div>
           </div>
@@ -866,7 +964,7 @@ export default function PanelDocente() {
               <BarChart2 className="w-5 h-5" style={{ color: '#f97316' }} />
             </div>
             <div>
-              <p className="font-bold text-slate-800">Test de burnout docente</p>
+              <p className="font-bold text-slate-800">Test de burnout</p>
               <p className="text-xs text-slate-400">Basado en MBI · 14 preguntas · 3 dimensiones</p>
             </div>
           </div>
@@ -882,7 +980,33 @@ export default function PanelDocente() {
           <div className="px-5 pb-5 space-y-3">
             {!resultadoBurnout ? (
               <>
-                <div className="flex flex-wrap gap-2 pt-1">
+                {/* Selector de versión */}
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={() => { setVersionBurnout('docente'); setRespBurnout({}) }}
+                    className="flex-1 py-2.5 rounded-2xl text-sm font-bold transition-all"
+                    style={{
+                      background: versionBurnout === 'docente' ? 'linear-gradient(135deg, #f97316, #ef4444)' : '#f8fafc',
+                      color: versionBurnout === 'docente' ? 'white' : '#64748b',
+                      border: versionBurnout === 'docente' ? 'none' : '2px solid #e2e8f0'
+                    }}>
+                    👩‍🏫 Test Burnout Docente
+                  </button>
+                  <button
+                    onClick={() => { setVersionBurnout('pas'); setRespBurnout({}) }}
+                    className="flex-1 py-2.5 rounded-2xl text-sm font-bold transition-all"
+                    style={{
+                      background: versionBurnout === 'pas' ? 'linear-gradient(135deg, #f97316, #ef4444)' : '#f8fafc',
+                      color: versionBurnout === 'pas' ? 'white' : '#64748b',
+                      border: versionBurnout === 'pas' ? 'none' : '2px solid #e2e8f0'
+                    }}>
+                    🏫 Test Burnout Personal
+                  </button>
+                </div>
+                <p className="text-xs text-slate-400 text-center">
+                  {versionBurnout === 'docente' ? 'Versión para docentes · MBI-ES' : 'Versión para personal no docente · MBI-HSS'}
+                </p>
+                <div className="flex flex-wrap gap-2">
                   {[{ label: 'Agotamiento emocional', color: '#ef4444' }, { label: 'Despersonalización', color: '#f97316' }, { label: 'Realización personal', color: '#6366f1' }].map(d => (
                     <span key={d.label} className="flex items-center gap-1 text-xs px-2 py-1 rounded-full"
                       style={{ background: `${d.color}15`, color: d.color, border: `1px solid ${d.color}30` }}>
@@ -891,21 +1015,21 @@ export default function PanelDocente() {
                   ))}
                 </div>
                 <div className="space-y-1">
-                  <div className="flex justify-between text-xs text-slate-400"><span>Progreso</span><span>{Object.keys(respBurnout).length} / {BURNOUT_PREGUNTAS.length}</span></div>
+                  <div className="flex justify-between text-xs text-slate-400"><span>Progreso</span><span>{Object.keys(respBurnout).length} / {preguntasBurnout.length}</span></div>
                   <BarraProgreso pct={progBurnout} color="#f97316" />
                 </div>
                 <p className="text-xs text-slate-400">Responde con sinceridad. No hay respuestas correctas o incorrectas. Tus datos son privados.</p>
-                {BURNOUT_PREGUNTAS.map((p, i) => {
+                {preguntasBurnout.map((p, i) => {
                   const dimColor = p.dimension === 'AE' ? '#ef4444' : p.dimension === 'DP' ? '#f97316' : '#6366f1'
                   const dimLabel = p.dimension === 'AE' ? 'Agotamiento' : p.dimension === 'DP' ? 'Despersonalización' : 'Realización'
-                  return <TarjetaPregunta key={i} index={i} total={BURNOUT_PREGUNTAS.length} texto={p.texto} opciones={OPCIONES_BURNOUT}
+                  return <TarjetaPregunta key={i} index={i} total={preguntasBurnout.length} texto={p.texto} opciones={OPCIONES_BURNOUT}
                     valorSeleccionado={respBurnout[i]} onChange={(j) => setRespBurnout(prev => ({ ...prev, [i]: j }))}
                     color={dimColor} etiqueta={dimLabel} />
                 })}
                 <button onClick={calcularBurnout} disabled={!burnoutCompleto}
                   className="w-full py-4 rounded-2xl font-bold disabled:opacity-40 transition-all text-base"
                   style={{ background: burnoutCompleto ? 'linear-gradient(135deg, #f97316, #ef4444)' : '#e2e8f0', color: burnoutCompleto ? 'white' : '#94a3b8' }}>
-                  {burnoutCompleto ? '🔥 Ver mi resultado' : `Responde todas las preguntas (${Object.keys(respBurnout).length}/${BURNOUT_PREGUNTAS.length})`}
+                  {burnoutCompleto ? '🔥 Ver mi resultado' : `Responde todas las preguntas (${Object.keys(respBurnout).length}/${preguntasBurnout.length})`}
                 </button>
               </>
             ) : (
@@ -939,7 +1063,7 @@ export default function PanelDocente() {
                   <p className="text-xs text-slate-600 leading-relaxed">Este cuestionario es orientativo y no sustituye una evaluación clínica. Si los resultados te preocupan, consulta con tu médico o con el orientador de tu centro.</p>
                 </div>
                 <button onClick={() => { setResultadoBurnout(null); setRespBurnout({}) }}
-                  className="w-full py-2.5 rounded-2xl text-sm font-medium border" style={{ borderColor: '#e2e8f0', color: '#64748b' }}>Repetir el test</button>
+                  className="w-full py-2.5 rounded-2xl text-sm font-medium border" style={{ borderColor: '#e2e8f0', color: '#64748b' }}>Repetir el test · {versionBurnout === 'docente' ? 'versión Docente' : 'versión Personal'}</button>
               </div>
             )}
           </div>

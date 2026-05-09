@@ -107,7 +107,7 @@ export default function Layout({ children }) {
           <div>
             <span className="font-black text-white text-lg tracking-tight">Resetea</span>
             <p className="text-white/50 text-xs -mt-0.5">
-              {isDocente ? 'Panel Docente' : 'Tu espacio de calma'}
+              {isDocente ? 'Panel Docente y PAS' : 'Tu espacio de calma'}
             </p>
           </div>
         </div>
@@ -139,7 +139,7 @@ export default function Layout({ children }) {
               <div>
                 <h1 className="font-black text-white text-xl tracking-tight">Resetea</h1>
                 <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                  {isDocente ? '👩‍🏫 Área docente' : 'Tu espacio de calma y conexión'}
+                  {isDocente ? '👩‍🏫 Área docente y PAS' : 'Tu espacio de calma y conexión'}
                 </p>
               </div>
             </div>
@@ -149,7 +149,7 @@ export default function Layout({ children }) {
           {isDocente ? (
             <div className="px-4 pt-4 space-y-1">
               {[
-                { name: 'Panel Docente', sub: 'Recursos y herramientas', path: '/docentes', icon: null, isLogo: true },
+                { name: 'Panel Docente y PAS', sub: 'Recursos y herramientas', path: '/docentes', icon: null, isLogo: true },
                 { name: 'Mi Perfil', sub: 'Tu cuenta', path: '/perfil', icon: User, isLogo: false },
                 ...(isAdmin ? [
                   { name: 'Panel Orientador', sub: 'Acceso con código', path: '/orientador', icon: Shield, isLogo: false },

@@ -77,6 +77,7 @@ function LoginOrientador({ onAcceso }) {
             {loading ? 'Verificando...' : 'Acceder al panel'}
           </button>
           <p className="text-xs text-slate-400 text-center">¿No tienes código? Contacta con el administrador del centro.</p>
+          <p className="text-xs text-slate-300 text-center pt-2 border-t border-slate-100">© 2026 Patricia Iso · Todos los derechos reservados</p>
         </div>
       </motion.div>
     </div>
@@ -124,13 +125,14 @@ function Dashboard({ orientador, onSalir }) {
   const cargar = async (silencioso = false) => {
     if (!silencioso) setLoading(true); else setRefreshing(true)
     try {
+      const centroId = orientador.centro_id
       const [r1, r2, r3, r4, r5, r6] = await Promise.all([
-        supabase.rpc('get_resetea_dashboard'),
-        supabase.rpc('get_resetea_actividades_por_tipo'),
-        supabase.rpc('get_resetea_ansiedad_stats'),
-        supabase.rpc('get_resetea_eval_quincenal_stats'),
-        supabase.rpc('get_resetea_eval_sesion_stats'),
-        supabase.rpc('get_resetea_usuarios_activos'),
+        supabase.rpc('get_resetea_dashboard',            { p_centro_id: centroId }),
+        supabase.rpc('get_resetea_actividades_por_tipo', { p_centro_id: centroId }),
+        supabase.rpc('get_resetea_ansiedad_stats',       { p_centro_id: centroId }),
+        supabase.rpc('get_resetea_eval_quincenal_stats', { p_centro_id: centroId }),
+        supabase.rpc('get_resetea_eval_sesion_stats',    { p_centro_id: centroId }),
+        supabase.rpc('get_resetea_usuarios_activos',     { p_centro_id: centroId }),
       ])
 
       // Dashboard — devuelve objeto JSON directamente
@@ -177,6 +179,7 @@ function Dashboard({ orientador, onSalir }) {
 
       const { data: perfiles } = await supabase
         .from('perfiles_docentes').select('user_id, created_at')
+        .eq('centro_id', orientador.centro_id)
 
       if (!perfiles || perfiles.length === 0) { setDocentes([]); return }
 
@@ -220,7 +223,7 @@ function Dashboard({ orientador, onSalir }) {
   const cargarGrupos = async () => {
     setLoadingGrupos(true)
     try {
-      const { data, error } = await supabase.rpc('get_orientador_datos_por_grupo')
+      const { data, error } = await supabase.rpc('get_orientador_datos_por_grupo', { p_centro_id: orientador.centro_id })
       if (error) throw error
       const parsed = typeof data === 'string' ? JSON.parse(data) : data
       setGrupos(Array.isArray(parsed) ? parsed : [])

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/api/supabaseClient'
-import { ChevronRight, X, ClipboardList } from 'lucide-react'
+import { ChevronRight, ChevronDown, X, ClipboardList } from 'lucide-react'
 import EvaluacionQuincenal from '@/components/EvaluacionQuincenal'
 
 const LOGO_URL = 'https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/WhatsApp%20Image%202026-04-06%20at%2015.58.04.jpeg'
@@ -123,6 +123,51 @@ function SemaforoModal({ onSelect, onClose }) {
   )
 }
 
+// ── Grupo de módulos con acordeón ─────────────────────────────────────────
+function GrupoModulos({ grupo, abierto, onToggle }) {
+  return (
+    <div className="rounded-2xl overflow-hidden"
+      style={{ background: grupo.bg, border: `1px solid ${grupo.borde}` }}>
+      {/* Cabecera clicable */}
+      <button
+        onClick={onToggle}
+        className="w-full px-4 py-3 flex items-center justify-between transition-all hover:opacity-80">
+        <p className="text-xs font-black tracking-wide" style={{ color: grupo.color }}>{grupo.grupo}</p>
+        <motion.div animate={{ rotate: abierto ? 180 : 0 }} transition={{ duration: 0.2 }}>
+          <ChevronDown className="w-4 h-4" style={{ color: grupo.color }} />
+        </motion.div>
+      </button>
+      {/* Items desplegables */}
+      <AnimatePresence initial={false}>
+        {abierto && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            style={{ overflow: 'hidden' }}>
+            <div className="px-3 pb-3 grid grid-cols-1 gap-2">
+              {grupo.items.map(item => (
+                <Link key={item.path} to={item.path}>
+                  <div className="flex items-center gap-3 p-3 rounded-xl transition-all hover:opacity-90"
+                    style={{ background: item.gradient }}>
+                    <span className="text-2xl flex-shrink-0">{item.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-bold text-sm leading-tight">{item.title}</p>
+                      <p className="text-xs mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.6)' }}>{item.sub}</p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.5)' }} />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 export default function Home() {
   const hour = new Date().getHours()
   const greeting = hour < 13 ? 'Buenos días' : hour < 20 ? 'Buenas tardes' : 'Buenas noches'
@@ -132,6 +177,7 @@ export default function Home() {
   const [estadoActual, setEstadoActual]         = useState(null)
   const [mostrarQuincenal, setMostrarQuincenal] = useState(false)
   const [quinc, setQuinc]                       = useState(false)
+  const [grupoAbierto, setGrupoAbierto]         = useState(null) // índice del grupo abierto
 
   useEffect(() => {
     const check = async () => {
@@ -145,6 +191,8 @@ export default function Home() {
     }
     check()
   }, [])
+
+  const toggleGrupo = (i) => setGrupoAbierto(prev => prev === i ? null : i)
 
   return (
     <div className="max-w-lg mx-auto">
@@ -253,37 +301,20 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      {/* ── TODOS LOS MÓDULOS ── */}
+      {/* ── TODOS LOS MÓDULOS (acordeón) ── */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-        className="space-y-4 mb-5">
+        className="space-y-3 mb-5">
         <p className="text-xs font-black tracking-widest" style={{ color: '#94a3b8' }}>📚 TODOS LOS MÓDULOS</p>
 
         {MODULOS.map((grupo, gi) => (
           <motion.div key={grupo.grupo}
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.18 + gi * 0.06 }}
-            className="rounded-2xl overflow-hidden"
-            style={{ background: grupo.bg, border: `1px solid ${grupo.borde}` }}>
-            {/* Cabecera del grupo */}
-            <div className="px-4 py-3 flex items-center gap-2">
-              <p className="text-xs font-black tracking-wide" style={{ color: grupo.color }}>{grupo.grupo}</p>
-            </div>
-            {/* Items del grupo */}
-            <div className="px-3 pb-3 grid grid-cols-1 gap-2">
-              {grupo.items.map(item => (
-                <Link key={item.path} to={item.path}>
-                  <div className="flex items-center gap-3 p-3 rounded-xl transition-all hover:opacity-90"
-                    style={{ background: item.gradient }}>
-                    <span className="text-2xl flex-shrink-0">{item.emoji}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white font-bold text-sm leading-tight">{item.title}</p>
-                      <p className="text-xs mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.6)' }}>{item.sub}</p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.5)' }} />
-                  </div>
-                </Link>
-              ))}
-            </div>
+            transition={{ delay: 0.18 + gi * 0.06 }}>
+            <GrupoModulos
+              grupo={grupo}
+              abierto={grupoAbierto === gi}
+              onToggle={() => toggleGrupo(gi)}
+            />
           </motion.div>
         ))}
       </motion.div>

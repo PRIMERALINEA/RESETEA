@@ -5,128 +5,112 @@ import { useNavigate } from 'react-router-dom'
 
 const PHASE_DURATION = 4000
 const PAUSE_DURATION = 4000
-const TOTAL_CYCLES = 4
+const TOTAL_CYCLES   = 4
+const INTRO_DURATION = 8000 // tiempo reservado para la intro de voz antes de empezar ciclos
 
 const PHASES = [
-  { id: 'inhala',  color: '#60a5fa', glow: '#3b82f680', scale: 1.5  },
-  { id: 'reten1', color: '#a78bfa', glow: '#8b5cf680', scale: 1.5  },
-  { id: 'exhala', color: '#34d399', glow: '#10b98180', scale: 0.6  },
-  { id: 'reten2', color: '#60a5fa', glow: '#3b82f640', scale: 0.6  },
+  { id: 'inhala',  color: '#60a5fa', glow: '#3b82f680', scale: 1.5 },
+  { id: 'reten1', color: '#a78bfa', glow: '#8b5cf680', scale: 1.5 },
+  { id: 'exhala', color: '#34d399', glow: '#10b98180', scale: 0.6 },
+  { id: 'reten2', color: '#60a5fa', glow: '#3b82f640', scale: 0.6 },
 ]
-
 const PHASE_LABELS    = ['INHALA', 'RETÉN', 'EXHALA', 'PAUSA']
 const PHASE_SUBTITLES = ['por la nariz', 'el aire', 'por la boca', 'y descansa']
 
-const VOICE_ID   = 'RgXx32WYOGrd7gFNifSf'
-const XI_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY
+const GOOGLE_TTS_KEY = import.meta.env.VITE_GOOGLE_TTS_KEY
 const audioCache = {}
+let activeAudio = null
 
-function speakNow(text) {
-  if (!window.speechSynthesis) return
-  window.speechSynthesis.cancel()
-  const u = new SpeechSynthesisUtterance(text)
-  u.lang = 'es-ES'; u.rate = 0.78; u.pitch = 1.1; u.volume = 1.0
-  // Intentar voz femenina española
-  const loadVoice = () => {
-    const voices = window.speechSynthesis.getVoices()
-    const fem = voices.find(v => v.lang === 'es-ES' && /female|mujer|mónica|lucia|elena|paulina/i.test(v.name))
-      || voices.find(v => v.lang.startsWith('es'))
-    if (fem) u.voice = fem
-    window.speechSynthesis.speak(u)
-  }
-  if (window.speechSynthesis.getVoices().length > 0) {
-    loadVoice()
-  } else {
-    window.speechSynthesis.onvoiceschanged = loadVoice
-  }
+function stopAudio() {
+  if (activeAudio) { activeAudio.pause(); activeAudio.currentTime = 0; activeAudio = null }
+  window.speechSynthesis?.cancel()
 }
 
-async function speak(text) {
-  if (XI_API_KEY) {
-    const key = `${VOICE_ID}_${text}`
+function speakNow(text, cancelRef) {
+  if (!window.speechSynthesis) return Promise.resolve()
+  window.speechSynthesis.cancel()
+  return new Promise(resolve => {
+    if (cancelRef?.current) { resolve(); return }
+    const u = new SpeechSynthesisUtterance(text)
+    u.lang = 'es-ES'; u.rate = 0.78; u.pitch = 1.1; u.volume = 1.0
+    u.onend = resolve
+    const loadVoice = () => {
+      const voices = window.speechSynthesis.getVoices()
+      const fem = voices.find(v => v.lang === 'es-ES' && /female|mujer|mónica|lucia|elena|paulina/i.test(v.name))
+        || voices.find(v => v.lang.startsWith('es'))
+      if (fem) u.voice = fem
+      window.speechSynthesis.speak(u)
+    }
+    if (window.speechSynthesis.getVoices().length > 0) loadVoice()
+    else window.speechSynthesis.onvoiceschanged = loadVoice
+  })
+}
+
+async function speak(text, cancelRef) {
+  if (cancelRef?.current) return
+  if (GOOGLE_TTS_KEY) {
+    const key = text.slice(0, 80)
     try {
       if (!audioCache[key]) {
-        const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
-          method: 'POST',
-          headers: { 'xi-api-key': XI_API_KEY, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text,
-            model_id: 'eleven_multilingual_v2',
-            voice_settings: { stability: 0.8, similarity_boost: 0.85, style: 0.2, use_speaker_boost: true }
-          })
-        })
-        if (!res.ok) throw new Error('ElevenLabs error')
-        audioCache[key] = URL.createObjectURL(await res.blob())
+        const res = await fetch(
+          `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              input: { text },
+              voice: { languageCode: 'es-ES', name: 'es-ES-Wavenet-C', ssmlGender: 'FEMALE' },
+              audioConfig: { audioEncoding: 'MP3', speakingRate: 0.85, pitch: 0.0 }
+            })
+          }
+        )
+        if (!res.ok) throw new Error('Google TTS error')
+        const { audioContent } = await res.json()
+        const blob = await fetch(`data:audio/mp3;base64,${audioContent}`).then(r => r.blob())
+        audioCache[key] = URL.createObjectURL(blob)
       }
-      const audio = new Audio(audioCache[key])
-      audio.volume = 0.95
-      await audio.play()
-      return
-    } catch (e) {
-      console.error('TTS error, usando navegador:', e)
-    }
+      if (cancelRef?.current) return
+      return new Promise(resolve => {
+        const audio = new Audio(audioCache[key])
+        audio.volume = 0.95
+        activeAudio = audio
+        audio.onended = () => { activeAudio = null; resolve() }
+        audio.play()
+      })
+    } catch (e) { console.error('Google TTS error:', e) }
   }
-  speakNow(text)
-}
-
-function buildScript() {
-  const CYCLE_DUR = PHASES.length * PHASE_DURATION
-  const INTRO = 8000
-  const script = []
-
-  script.push({ text: 'Siéntate cómodo y cierra los ojos.', delay: 0 })
-  script.push({ text: 'Exhala todo el aire. Vamos a empezar.', delay: 3500 })
-
-  for (let c = 0; c < TOTAL_CYCLES; c++) {
-    const cs = INTRO + c * (CYCLE_DUR + PAUSE_DURATION)
-    script.push({ text: 'Inhala por la nariz.', delay: cs })
-    script.push({ text: 'Retén el aire.', delay: cs + PHASE_DURATION })
-    script.push({ text: 'Exhala lentamente por la boca.', delay: cs + PHASE_DURATION * 2 })
-    script.push({ text: 'Pausa. Relájate.', delay: cs + PHASE_DURATION * 3 })
-    if (c < TOTAL_CYCLES - 1) {
-      script.push({ text: `Muy bien. Ciclo ${c + 1} completado.`, delay: cs + CYCLE_DUR + 500 })
-    }
-  }
-
-  const end = INTRO + TOTAL_CYCLES * (CYCLE_DUR + PAUSE_DURATION)
-  script.push({ text: 'Perfecto. Vuelve a tu respiración natural.', delay: end })
-  script.push({ text: '¡Lo has hecho genial! Abre los ojos cuando quieras.', delay: end + 4000 })
-
-  return script.sort((a, b) => a.delay - b.delay)
+  return speakNow(text, cancelRef)
 }
 
 export default function RespiracionCuadrada() {
-  const [state, setState]       = useState('idle')
-  const [cycle, setCycle]       = useState(0)
-  const [phaseIdx, setPhaseIdx] = useState(0)
-  const [isPaused, setIsPaused] = useState(false)
-  const [counter, setCounter]   = useState(4)
-  const [saving, setSaving]     = useState(false)
-  const [saved, setSaved]       = useState(false)
+  const [state, setState]         = useState('idle')
+  const [cycle, setCycle]         = useState(0)
+  const [phaseIdx, setPhaseIdx]   = useState(0)
+  const [isPaused, setIsPaused]   = useState(false)
+  const [counter, setCounter]     = useState(4)
+  const [introLista, setIntroLista] = useState(false)
+  const [saving, setSaving]       = useState(false)
+  const [saved, setSaved]         = useState(false)
   const startRef  = useRef(null)
   const timersRef = useRef([])
   const rafRef    = useRef(null)
+  const cancelRef = useRef(false)
   const navigate  = useNavigate()
 
   const CYCLE_DUR = PHASES.length * PHASE_DURATION
-  const INTRO = 8000
 
   const clearAll = () => {
     timersRef.current.forEach(clearTimeout)
     timersRef.current = []
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
-    window.speechSynthesis?.cancel()
+    stopAudio()
   }
 
+  // RAF: solo corre después de la intro (introLista)
   const tick = useCallback(() => {
-    if (!startRef.current) return
+    if (!startRef.current || cancelRef.current) return
     const elapsed = Date.now() - startRef.current
-    if (elapsed < INTRO) {
-      setPhaseIdx(0); setCycle(0); setIsPaused(false); setCounter(4)
-      rafRef.current = requestAnimationFrame(tick)
-      return
-    }
-    const afterIntro = elapsed - INTRO
+    const afterIntro = elapsed
     const blockDur = CYCLE_DUR + PAUSE_DURATION
     const block = Math.floor(afterIntro / blockDur)
     const timeInBlock = afterIntro % blockDur
@@ -142,21 +126,56 @@ export default function RespiracionCuadrada() {
     rafRef.current = requestAnimationFrame(tick)
   }, [])
 
-  const start = () => {
+  // Arranque: primero intro completa → luego ciclos
+  const start = async () => {
+    cancelRef.current = false
     clearAll()
     setState('running')
-    setCycle(0); setPhaseIdx(0); setIsPaused(false); setCounter(4); setSaved(false)
+    setCycle(0); setPhaseIdx(0); setIsPaused(false); setCounter(4); setSaved(false); setIntroLista(false)
+
+    // Intro de voz secuencial — NO empieza el RAF hasta que termina
+    await speak('Siéntate cómodo y cierra los ojos.', cancelRef)
+    if (cancelRef.current) return
+    await speak('Exhala todo el aire. Vamos a empezar.', cancelRef)
+    if (cancelRef.current) return
+
+    // Intro terminada → arrancamos ciclos
     startRef.current = Date.now()
-    buildScript().forEach(({ text, delay }) => {
-      timersRef.current.push(setTimeout(() => speak(text), delay))
+    setIntroLista(true)
+
+    // Script de voz para los ciclos (relativo al momento en que empieza startRef)
+    const script = []
+    for (let c = 0; c < TOTAL_CYCLES; c++) {
+      const cs = c * (CYCLE_DUR + PAUSE_DURATION)
+      script.push({ text: 'Inhala por la nariz.',            delay: cs })
+      script.push({ text: 'Retén el aire.',                  delay: cs + PHASE_DURATION })
+      script.push({ text: 'Exhala lentamente por la boca.',  delay: cs + PHASE_DURATION * 2 })
+      script.push({ text: 'Pausa. Relájate.',                delay: cs + PHASE_DURATION * 3 })
+      if (c < TOTAL_CYCLES - 1) {
+        script.push({ text: `Muy bien. Ciclo ${c + 1} completado.`, delay: cs + CYCLE_DUR + 500 })
+      }
+    }
+    const endDelay = TOTAL_CYCLES * (CYCLE_DUR + PAUSE_DURATION)
+    script.push({ text: 'Perfecto. Vuelve a tu respiración natural.',      delay: endDelay })
+    script.push({ text: '¡Lo has hecho genial! Abre los ojos cuando quieras.', delay: endDelay + 4000 })
+
+    script.sort((a, b) => a.delay - b.delay).forEach(({ text, delay }) => {
+      timersRef.current.push(setTimeout(() => {
+        if (!cancelRef.current) speak(text, cancelRef)
+      }, delay))
     })
-    const total = INTRO + TOTAL_CYCLES * (CYCLE_DUR + PAUSE_DURATION) + 10000
-    timersRef.current.push(setTimeout(() => setState('done'), total))
+
+    timersRef.current.push(setTimeout(() => {
+      if (!cancelRef.current) setState('done')
+    }, endDelay + 10000))
+
     rafRef.current = requestAnimationFrame(tick)
   }
 
   const reset = () => {
-    clearAll(); setState('idle'); setCycle(0); setPhaseIdx(0); setIsPaused(false); setCounter(4)
+    cancelRef.current = true
+    clearAll()
+    setState('idle'); setCycle(0); setPhaseIdx(0); setIsPaused(false); setCounter(4); setIntroLista(false)
   }
 
   const saveSession = async () => {
@@ -179,7 +198,7 @@ export default function RespiracionCuadrada() {
     finally { setSaving(false) }
   }
 
-  useEffect(() => () => clearAll(), [])
+  useEffect(() => () => { cancelRef.current = true; clearAll() }, [])
 
   const phase = PHASES[phaseIdx] || PHASES[0]
   const isPulse = phaseIdx === 1 || phaseIdx === 3
@@ -189,10 +208,16 @@ export default function RespiracionCuadrada() {
     <div className="min-h-screen flex flex-col items-center justify-center"
       style={{ background: 'radial-gradient(ellipse at center, #0d1b3e 0%, #050d1f 100%)' }}>
 
-      {/* Botón volver */}
       {state === 'idle' && (
         <button onClick={() => navigate('/respiracion')}
           className="absolute top-6 left-6 text-white/40 hover:text-white text-sm">← Volver</button>
+      )}
+      {state === 'running' && (
+        <button onClick={reset}
+          className="absolute top-6 left-6 px-4 py-2 rounded-xl text-white font-bold text-sm"
+          style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}>
+          ✕ Detener
+        </button>
       )}
 
       {/* Halo */}
@@ -203,14 +228,13 @@ export default function RespiracionCuadrada() {
             style={{ width: '85vmin', height: '85vmin' }}
             initial={{ opacity: 0 }}
             animate={{
-              opacity: state === 'running' && !isPaused ? (isPulse ? [0.3, 0.8, 0.3] : 0.4) : 0.15,
+              opacity: state === 'running' && introLista && !isPaused ? (isPulse ? [0.3, 0.8, 0.3] : 0.4) : 0.15,
               background: `radial-gradient(circle, ${phase.glow} 0%, transparent 70%)`
             }}
             transition={isPulse ? { duration: 1.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.5 }}
           />
         </AnimatePresence>
 
-        {/* Círculo principal */}
         <motion.div
           className="rounded-full flex items-center justify-center"
           style={{
@@ -218,7 +242,7 @@ export default function RespiracionCuadrada() {
             background: `radial-gradient(circle at 35% 35%, ${phase.color}cc, ${phase.color}55)`,
             boxShadow: `0 0 80px ${phase.glow}`,
           }}
-          animate={state === 'running' && !isPaused
+          animate={state === 'running' && introLista && !isPaused
             ? isPulse
               ? { scale: [phase.scale, phase.scale * 1.07, phase.scale], boxShadow: [`0 0 60px ${phase.glow}`, `0 0 120px ${phase.color}aa`, `0 0 60px ${phase.glow}`] }
               : { scale: phase.scale }
@@ -231,20 +255,21 @@ export default function RespiracionCuadrada() {
 
       {/* Label fase */}
       <div className="mt-6 h-16 flex flex-col items-center justify-center">
-        {state === 'running' && !isPaused && (
+        {state === 'running' && !introLista && (
+          <p className="text-white/40 text-sm tracking-widest">Preparando...</p>
+        )}
+        {state === 'running' && introLista && !isPaused && (
           <AnimatePresence mode="wait">
             <motion.div key={`label-${phaseIdx}-${cycle}`}
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
               className="flex flex-col items-center">
-              <span className="font-black tracking-widest text-2xl" style={{ color: phase.color }}>
-                {PHASE_LABELS[phaseIdx]}
-              </span>
+              <span className="font-black tracking-widest text-2xl" style={{ color: phase.color }}>{PHASE_LABELS[phaseIdx]}</span>
               <span className="text-white/40 text-xs mt-0.5">{PHASE_SUBTITLES[phaseIdx]}</span>
               <span className="text-white/50 font-black mt-1">{counter}s</span>
             </motion.div>
           </AnimatePresence>
         )}
-        {state === 'running' && isPaused && (
+        {state === 'running' && introLista && isPaused && (
           <p className="text-white/30 text-xs tracking-widest">Ciclo {cycle + 1} completado</p>
         )}
       </div>
@@ -271,16 +296,13 @@ export default function RespiracionCuadrada() {
           </motion.div>
         )}
 
-        {state === 'running' && (
-          <>
-            <div className="flex gap-2">
-              {Array.from({ length: TOTAL_CYCLES }).map((_, i) => (
-                <div key={i} className="w-1.5 h-1.5 rounded-full transition-all"
-                  style={{ background: i < cycle ? '#4ade80' : i === cycle ? '#60a5fa' : 'rgba(255,255,255,0.1)', transform: i === cycle ? 'scale(1.4)' : 'scale(1)' }} />
-              ))}
-            </div>
-            <button onClick={reset} className="text-white/20 text-xs hover:text-white/40">detener</button>
-          </>
+        {state === 'running' && introLista && (
+          <div className="flex gap-2">
+            {Array.from({ length: TOTAL_CYCLES }).map((_, i) => (
+              <div key={i} className="w-1.5 h-1.5 rounded-full transition-all"
+                style={{ background: i < cycle ? '#4ade80' : i === cycle ? '#60a5fa' : 'rgba(255,255,255,0.1)', transform: i === cycle ? 'scale(1.4)' : 'scale(1)' }} />
+            ))}
+          </div>
         )}
 
         <AnimatePresence>
@@ -289,9 +311,7 @@ export default function RespiracionCuadrada() {
               className="flex flex-col items-center gap-4">
               <p className="text-white text-2xl font-black">¡Lo has conseguido! 🎉</p>
               <p className="text-white/40 text-sm">Tómate un momento para notar la calma</p>
-              <button
-                onClick={async () => { await saveSession(); navigate('/respiracion') }}
-                disabled={saving}
+              <button onClick={async () => { await saveSession(); navigate('/respiracion') }} disabled={saving}
                 className="px-8 py-3 rounded-2xl text-white font-bold text-sm"
                 style={{ background: saved ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}>
                 {saving ? 'Guardando...' : saved ? '✓ Guardado' : '💾 Guardar y cerrar'}

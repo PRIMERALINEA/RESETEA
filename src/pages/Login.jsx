@@ -283,6 +283,8 @@ export default function Login() {
           }} className="w-full text-sm text-teal-600 hover:text-teal-800 transition-colors pt-1">
             {isRegister ? '¿Ya tienes cuenta? Entra aquí' : '¿Primera vez? Crea tu cuenta'}
           </button>
+
+          <p className="text-center text-xs text-slate-400 pt-2 border-t border-slate-100">© 2026 Patricia Iso · Todos los derechos reservados</p>
         </div>
 
         <p className="text-center text-xs text-teal-200/60 mt-6">Tus datos son privados y seguros 🔒</p>
