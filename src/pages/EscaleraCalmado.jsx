@@ -44,7 +44,7 @@ async function speak(text, cancelRef) {
             body: JSON.stringify({
               input: { text },
               voice: { languageCode: 'es-ES', name: 'es-ES-Neural2-A', ssmlGender: 'FEMALE' },
-              audioConfig: { audioEncoding: 'MP3', speakingRate: 0.90, pitch: 0.0 }
+              audioConfig: { audioEncoding: 'MP3', speakingRate: 0.78, pitch: -2.0 }
             })
           }
         )
