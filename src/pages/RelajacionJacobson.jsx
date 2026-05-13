@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/api/supabaseClient'
 import { useNavigate } from 'react-router-dom'
@@ -7,7 +7,6 @@ import { Heart, CheckCircle } from 'lucide-react'
 const GOOGLE_TTS_KEY = import.meta.env.VITE_GOOGLE_TTS_KEY
 const audioCache = {}
 
-// Audio activo global para poder pararlo
 let activeAudio = null
 
 function stopAudio() {
@@ -27,6 +26,7 @@ function speakNow(text, cancelRef) {
     const u = new SpeechSynthesisUtterance(text)
     u.lang = 'es-ES'; u.rate = 0.75; u.pitch = 1.05; u.volume = 1.0
     u.onend = resolve
+    u.onerror = resolve
     const loadVoice = () => {
       const voices = window.speechSynthesis.getVoices()
       const fem = voices.find(v => v.lang === 'es-ES' && /female|mujer|mónica|lucia|elena|paulina/i.test(v.name))
@@ -68,13 +68,47 @@ async function speak(text, cancelRef) {
         audio.volume = 0.95
         activeAudio = audio
         audio.onended = () => { activeAudio = null; resolve() }
-        audio.play()
+        audio.onerror = () => { activeAudio = null; resolve() }
+        audio.play().catch(() => resolve())
       })
     } catch (e) {
       console.error('Google TTS error, usando navegador:', e)
     }
   }
   return speakNow(text, cancelRef)
+}
+
+// Espera N segundos actualizando el contador visual. Resuelve antes si cancelRef se activa.
+function waitWithCounter(seconds, cancelRef, setCounter) {
+  return new Promise(resolve => {
+    setCounter(seconds)
+    let remaining = seconds
+    const tick = setInterval(() => {
+      if (cancelRef.current) {
+        clearInterval(tick)
+        resolve()
+        return
+      }
+      remaining -= 1
+      setCounter(remaining)
+      if (remaining <= 0) {
+        clearInterval(tick)
+        resolve()
+      }
+    }, 1000)
+  })
+}
+
+// Espera N segundos en silencio sin mostrar contador
+function waitSilent(seconds, cancelRef) {
+  return new Promise(resolve => {
+    let remaining = seconds
+    const tick = setInterval(() => {
+      if (cancelRef.current) { clearInterval(tick); resolve(); return }
+      remaining -= 1
+      if (remaining <= 0) { clearInterval(tick); resolve() }
+    }, 1000)
+  })
 }
 
 const GROUPS = [
@@ -122,65 +156,82 @@ export default function RelajacionJacobson() {
   const [counter, setCounter]   = useState(7)
   const [saving, setSaving]     = useState(false)
   const [saved, setSaved]       = useState(false)
-  const timerRef  = useRef(null)
   const startRef  = useRef(null)
   const cancelRef = useRef(false)
   const navigate  = useNavigate()
 
   const group = GROUPS[groupIdx]
-  const clearTimer = () => { if (timerRef.current) clearInterval(timerRef.current) }
 
-  const start = async () => {
+  // ─── Secuencia principal: completamente async y lineal ───────────────────
+  // No hay useEffect de timer. Todo avanza cuando el audio termina + el tiempo pasa.
+  const runSequence = useCallback(async () => {
     cancelRef.current = false
     startRef.current = Date.now()
-    setState('running')
-    setGroupIdx(0)
-    setPhase('tense')
-    setCounter(GROUPS[0].tense)
     setSaved(false)
-    await speak('Vamos a hacer la relajación muscular progresiva de Jacobson. Siéntate o túmbate cómodamente.', cancelRef)
+
+    // Intro
+    await speak('Siéntate o túmbate cómodamente.', cancelRef)
     if (cancelRef.current) return
-    await speak('Vamos a empezar con las manos y los brazos.', cancelRef)
+
+    for (let i = 0; i < GROUPS.length; i++) {
+      const g = GROUPS[i]
+      if (cancelRef.current) return
+
+      // Anunciar grupo
+      const anuncio = i === 0
+        ? 'Empezamos con manos y brazos.'
+        : `Ahora ${g.name}.`
+      await speak(anuncio, cancelRef)
+      if (cancelRef.current) return
+
+      // ── FASE TENSIÓN ──────────────────────────────────────────────────
+      setGroupIdx(i)
+      setPhase('tense')
+
+      // Lanzar audio instrucción — esperar 14s en silencio sin contador
+      speak(g.tenseText, cancelRef)
+      await waitSilent(14, cancelRef)
+      if (cancelRef.current) return
+
+      // Solo ahora arranca el contador del ejercicio (7s)
+      await waitWithCounter(g.tense, cancelRef, setCounter)
+      if (cancelRef.current) return
+
+      // ── FASE RELAJACIÓN ───────────────────────────────────────────────
+      // Lanzar audio relajación — esperar 14s en silencio sin contador
+      speak(g.relaxText, cancelRef)
+      await waitSilent(14, cancelRef)
+      if (cancelRef.current) return
+
+      // Solo ahora cambia la pantalla a SUELTA y arranca el contador (20s)
+      setPhase('relax')
+      await waitWithCounter(g.relax, cancelRef, setCounter)
+      if (cancelRef.current) return
+    }
+
+    // Fin
+    setState('done')
+    await speak('Perfecto. Has completado la relajación muscular completa.', cancelRef)
     if (cancelRef.current) return
-    speak(GROUPS[0].tenseText, cancelRef)
+    await speak('Tómate un momento para disfrutar de esta sensación de calma. Cuando quieras, abre los ojos.', cancelRef)
+  }, [])
+
+  const start = () => {
+    setState('running')
+    runSequence()
   }
 
-  useEffect(() => {
-    if (state !== 'running') return
-    clearTimer()
-    timerRef.current = setInterval(() => {
-      if (cancelRef.current) { clearInterval(timerRef.current); return }
-      setCounter(prev => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current)
-          if (cancelRef.current) return 0
-          if (phase === 'tense') {
-            setPhase('relax')
-            setCounter(group.relax)
-            speak(group.relaxText, cancelRef)
-          } else {
-            const next = groupIdx + 1
-            if (next < GROUPS.length) {
-              setGroupIdx(next)
-              setPhase('tense')
-              setCounter(GROUPS[next].tense)
-              speak(`Ahora ${GROUPS[next].name}.`, cancelRef).then(() => {
-                if (!cancelRef.current) speak(GROUPS[next].tenseText, cancelRef)
-              })
-            } else {
-              setState('done')
-              speak('Perfecto. Has completado la relajación muscular completa.', cancelRef).then(() => {
-                if (!cancelRef.current) speak('Tómate un momento para disfrutar de esta sensación de calma. Cuando quieras, abre los ojos.', cancelRef)
-              })
-            }
-          }
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-    return clearTimer
-  }, [state, phase, groupIdx])
+  const reset = () => {
+    cancelRef.current = true
+    stopAudio()
+    setState('idle')
+    setGroupIdx(0)
+    setPhase('tense')
+    setCounter(7)
+    setSaved(false)
+  }
+
+  useEffect(() => () => { cancelRef.current = true; stopAudio() }, [])
 
   const saveSession = async () => {
     if (saving || saved) return
@@ -201,19 +252,7 @@ export default function RelajacionJacobson() {
     finally { setSaving(false) }
   }
 
-  const reset = () => {
-    cancelRef.current = true
-    clearTimer()
-    stopAudio()
-    setState('idle')
-    setGroupIdx(0)
-    setPhase('tense')
-    setCounter(7)
-    setSaved(false)
-  }
-
-  useEffect(() => () => { cancelRef.current = true; clearTimer(); stopAudio() }, [])
-
+  // ─── UI: idle ────────────────────────────────────────────────────────────
   if (state === 'idle') {
     return (
       <div className="max-w-lg mx-auto px-4 py-6">
@@ -250,6 +289,7 @@ export default function RelajacionJacobson() {
     )
   }
 
+  // ─── UI: done ────────────────────────────────────────────────────────────
   if (state === 'done') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6"
@@ -273,6 +313,7 @@ export default function RelajacionJacobson() {
     )
   }
 
+  // ─── UI: running ─────────────────────────────────────────────────────────
   const totalSecs = phase === 'tense' ? group.tense : group.relax
   const progress = ((totalSecs - counter) / totalSecs) * 100
 
@@ -289,7 +330,10 @@ export default function RelajacionJacobson() {
       <div className="flex gap-2 mb-8">
         {GROUPS.map((_, i) => (
           <div key={i} className="w-2 h-2 rounded-full transition-all"
-            style={{ background: i < groupIdx ? '#4ade80' : i === groupIdx ? group.color : 'rgba(255,255,255,0.15)', transform: i === groupIdx ? 'scale(1.5)' : 'scale(1)' }} />
+            style={{
+              background: i < groupIdx ? '#4ade80' : i === groupIdx ? group.color : 'rgba(255,255,255,0.15)',
+              transform: i === groupIdx ? 'scale(1.5)' : 'scale(1)'
+            }} />
         ))}
       </div>
 
