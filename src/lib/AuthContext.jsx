@@ -18,6 +18,38 @@ export function AuthProvider({ children }) {
     return email.toLowerCase().endsWith(DOMINIO_PERMITIDO)
   }, [])
 
+  // ── Garantizar que el perfil existe al hacer login ──────────────────────
+  // Si el usuario se registró pero el perfil no se creó (error de red, etc.)
+  // lo creamos aquí para que sus sesiones aparezcan en el panel del orientador
+  const garantizarPerfil = useCallback(async (userId, email) => {
+    try {
+      const { data: docente } = await supabase
+        .from('perfiles_docentes').select('user_id').eq('user_id', userId).maybeSingle()
+      if (docente) return
+
+      const { data: alumno } = await supabase
+        .from('perfiles_alumnos').select('user_id').eq('user_id', userId).maybeSingle()
+      if (alumno) return
+
+      const dominio = email?.split('@')[1]
+      if (!dominio) return
+
+      const { data: centro } = await supabase
+        .from('centros').select('id').eq('dominio', dominio).eq('activo', true).maybeSingle()
+      if (!centro) return
+
+      await supabase.from('perfiles_alumnos').insert({
+        user_id: userId,
+        curso: 'Sin asignar',
+        centro_id: centro.id,
+        acepta_politica: true,
+        created_at: new Date().toISOString(),
+      })
+    } catch (e) {
+      logError('garantizarPerfil', e)
+    }
+  }, [])
+
   // ── Leer rol desde Supabase ──────────────────────────────────────────────
   const cargarRol = useCallback(async (userId) => {
     try {
@@ -78,13 +110,14 @@ export function AuthProvider({ children }) {
       if (!emailValido(session.user.email)) { logout(); return }
       if (!checkSessionTimeout(session)) return
       setUser(session.user)
+      await garantizarPerfil(session.user.id, session.user.email)
       await cargarRol(session.user.id)
     } catch (e) {
       logError('procesarSesion', e)
       setUser(null)
       setRol(null)
     }
-  }, [emailValido, logout, checkSessionTimeout, cargarRol])
+  }, [emailValido, logout, checkSessionTimeout, cargarRol, garantizarPerfil])
 
   // ── Inicialización ───────────────────────────────────────────────────────
   useEffect(() => {
