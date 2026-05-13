@@ -5,6 +5,63 @@ import { supabase } from '@/api/supabaseClient'
 import { ChevronRight, ChevronDown, X, ClipboardList } from 'lucide-react'
 import EvaluacionQuincenal from '@/components/EvaluacionQuincenal'
 
+const CURSOS = [
+  '1º Primaria', '2º Primaria', '3º Primaria',
+  '4º Primaria', '5º Primaria', '6º Primaria',
+  '1º ESO', '2º ESO', '3º ESO', '4º ESO',
+  '1º Bachillerato', '2º Bachillerato',
+  'FP Básica', '1º FP Medio', '2º FP Medio',
+  '1º FP Superior', '2º FP Superior',
+]
+
+// ── Modal obligatorio para completar el curso ─────────────────────────────
+function ModalCompletarCurso({ onGuardado }) {
+  const [curso, setCurso] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const guardar = async () => {
+    if (!curso) return
+    setSaving(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      await supabase.from('perfiles_alumnos')
+        .update({ curso })
+        .eq('user_id', user.id)
+      onGuardado()
+    } catch (e) { console.error(e) }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.7)' }}>
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6">
+        <div className="text-center mb-5">
+          <p className="text-3xl mb-2">🎒</p>
+          <p className="font-black text-xl text-slate-800">¿En qué curso estás?</p>
+          <p className="text-slate-500 text-sm mt-1">Necesitamos este dato para personalizar tu experiencia</p>
+        </div>
+        <div className="relative mb-4">
+          <select value={curso} onChange={e => setCurso(e.target.value)}
+            className="w-full border-2 border-slate-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-teal-400 appearance-none bg-white"
+            style={{ color: curso ? '#1e293b' : '#94a3b8' }}>
+            <option value="" disabled>Selecciona tu curso</option>
+            {CURSOS.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <button onClick={guardar} disabled={!curso || saving}
+          className="w-full py-3 rounded-2xl text-white font-bold disabled:opacity-50"
+          style={{ background: 'linear-gradient(135deg, #0d3d3d, #0f6b6b)' }}>
+          {saving ? 'Guardando...' : 'Continuar'}
+        </button>
+      </motion.div>
+    </div>
+  )
+}
+
+
 const LOGO_URL = 'https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/WhatsApp%20Image%202026-04-06%20at%2015.58.04.jpeg'
 
 const ESTADOS = [
@@ -178,11 +235,21 @@ export default function Home() {
   const [mostrarQuincenal, setMostrarQuincenal] = useState(false)
   const [quinc, setQuinc]                       = useState(false)
   const [grupoAbierto, setGrupoAbierto]         = useState(null) // índice del grupo abierto
+  const [mostrarModalCurso, setMostrarModalCurso] = useState(false)
 
   useEffect(() => {
     const check = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+
+      // Comprobar si el curso está sin asignar
+      const { data: perfil } = await supabase.from('perfiles_alumnos')
+        .select('curso').eq('user_id', user.id).maybeSingle()
+      if (perfil && (!perfil.curso || perfil.curso === 'Sin asignar')) {
+        setMostrarModalCurso(true)
+        return
+      }
+
       const { data } = await supabase.from('evaluaciones_quincenales').select('created_at')
         .eq('user_id', user.id).order('created_at', { ascending: false }).limit(1)
       if (!data || data.length === 0) { setQuinc(true); return }
@@ -196,6 +263,11 @@ export default function Home() {
 
   return (
     <div className="max-w-lg mx-auto">
+
+      {/* Modal obligatorio si no tiene curso asignado */}
+      {mostrarModalCurso && (
+        <ModalCompletarCurso onGuardado={() => setMostrarModalCurso(false)} />
+      )}
 
       {/* ── HEADER CARD ── */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
