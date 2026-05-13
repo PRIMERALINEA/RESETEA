@@ -190,7 +190,7 @@ export default function RelajacionJacobson() {
 
       // Lanzar audio instrucción — esperar 14s en silencio sin contador
       speak(g.tenseText, cancelRef)
-      await waitSilent(14, cancelRef)
+      await waitSilent(7, cancelRef)
       if (cancelRef.current) return
 
       // Solo ahora arranca el contador del ejercicio (7s)
@@ -200,7 +200,7 @@ export default function RelajacionJacobson() {
       // ── FASE RELAJACIÓN ───────────────────────────────────────────────
       // Lanzar audio relajación — esperar 14s en silencio sin contador
       speak(g.relaxText, cancelRef)
-      await waitSilent(14, cancelRef)
+      await waitSilent(7, cancelRef)
       if (cancelRef.current) return
 
       // Solo ahora cambia la pantalla a SUELTA y arranca el contador (20s)
