@@ -24,6 +24,8 @@ import PanelOrientador from '@/pages/PanelOrientador'
 import PanelDocente from '@/pages/PanelDocente'
 import Bienestar from '@/pages/Bienestar'
 import ModuloFamilias from '@/pages/ModuloFamilias'
+import AccesoIndividual from '@/pages/AccesoIndividual'
+import RegistroIndividual from '@/pages/RegistroIndividual'
 import Layout from '@/components/Layout'
 import { RgpdBanner, useRgpdConsent, PoliticaPrivacidad } from '@/components/RgpdBanner'
 
@@ -55,12 +57,13 @@ function AlumnoRoute({ children }) {
 }
 
 // ── Ruta exclusiva para docentes ──────────────────────────────────────────
+// FIX 3: si rol es null y loading ha terminado, no es docente → redirigir a home de alumno
 function DocenteRoute({ children }) {
   const { user, loading, rol } = useAuth()
   if (loading) return <Spinner />
   if (!user) return <Navigate to="/login" replace />
-  // Si es alumno, redirigir a su home
-  if (rol === 'alumno') return <Navigate to="/" replace />
+  // rol null tras carga completa = no es docente
+  if (rol === null || rol === 'alumno') return <Navigate to="/" replace />
   return children
 }
 
@@ -81,6 +84,8 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/privacidad" element={<PoliticaPrivacidad />} />
         <Route path="/orientador" element={<PanelOrientador />} />
+        <Route path="/acceso-individual" element={<AccesoIndividual />} />
+        <Route path="/registro-individual" element={<RegistroIndividual />} />
 
         {/* ── Rutas de ALUMNO (solo alumno) ── */}
         <Route path="/"                  element={<AL><Home /></AL>} />

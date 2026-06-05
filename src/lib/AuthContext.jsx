@@ -2,7 +2,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase, logError } from '@/api/supabaseClient'
 
-const DOMINIO_PERMITIDO = '@svalero.com'
 const SESSION_TIMEOUT_MS = 8 * 60 * 60 * 1000
 
 const AuthContext = createContext(null)
@@ -13,14 +12,46 @@ export function AuthProvider({ children }) {
   const [loading, setLoading]       = useState(true)
   const [sessionAge, setSessionAge] = useState(null)
 
-  const emailValido = useCallback((email) => {
+  // ── Validación dinámica: dominio registrado en centros O suscripción activa
+  // FIX 1: alumnos individuales (subscription_type === 'individual') siempre válidos,
+  //         independientemente de su dominio de email y del estado de suscripción.
+  const emailValido = useCallback(async (email, userId) => {
     if (!email || typeof email !== 'string') return false
-    return email.toLowerCase().endsWith(DOMINIO_PERMITIDO)
+
+    try {
+      if (userId) {
+        const { data: perfil } = await supabase
+          .from('perfiles_alumnos')
+          .select('subscription_status, subscription_type')
+          .eq('user_id', userId)
+          .maybeSingle()
+
+        // Suscripción de pago activa
+        if (perfil?.subscription_status === 'active') return true
+
+        // Alumno individual registrado (con o sin pago aún completado)
+        if (perfil?.subscription_type === 'individual') return true
+      }
+
+      // Dominio de centro registrado y activo
+      const dominio = email.split('@')[1]
+      if (!dominio) return false
+
+      const { data: centro } = await supabase
+        .from('centros')
+        .select('id')
+        .eq('dominio', dominio)
+        .eq('activo', true)
+        .maybeSingle()
+
+      return !!centro
+    } catch (e) {
+      logError('emailValido', e)
+      return false
+    }
   }, [])
 
   // ── Garantizar que el perfil existe al hacer login ──────────────────────
-  // Si el usuario se registró pero el perfil no se creó (error de red, etc.)
-  // lo creamos aquí para que sus sesiones aparezcan en el panel del orientador
   const garantizarPerfil = useCallback(async (userId, email) => {
     try {
       const { data: docente } = await supabase
@@ -57,7 +88,7 @@ export function AuthProvider({ children }) {
         .from('perfiles_docentes')
         .select('rol')
         .eq('user_id', userId)
-        .maybeSingle()           // ← maybeSingle no lanza error si no hay fila
+        .maybeSingle()
       if (docente) { setRol('docente'); return }
 
       const { data: alumno } = await supabase
@@ -107,7 +138,8 @@ export function AuthProvider({ children }) {
   const procesarSesion = useCallback(async (session) => {
     try {
       if (!session?.user) { setUser(null); setRol(null); return }
-      if (!emailValido(session.user.email)) { logout(); return }
+      const valido = await emailValido(session.user.email, session.user.id)
+      if (!valido) { logout(); return }
       if (!checkSessionTimeout(session)) return
       setUser(session.user)
       await garantizarPerfil(session.user.id, session.user.email)
@@ -133,7 +165,7 @@ export function AuthProvider({ children }) {
         logError('init', e)
         setUser(null); setRol(null)
       } finally {
-        if (mounted) setLoading(false)  // ← SIEMPRE se ejecuta
+        if (mounted) setLoading(false)
       }
     }
 
@@ -147,7 +179,6 @@ export function AuthProvider({ children }) {
         return
       }
       if (event === 'PASSWORD_RECOVERY') return
-      // Para SIGNED_IN y TOKEN_REFRESHED usamos Promise para no bloquear
       procesarSesion(session).finally(() => {
         if (mounted) setLoading(false)
       })
@@ -186,7 +217,8 @@ export function AuthProvider({ children }) {
     sessionAge,
     isAuthenticated: !!user,
     isDocente: rol === 'docente',
-    isAlumno: rol === 'alumno' || rol === null,
+    // FIX 2: rol === null solo es alumno cuando loading ha terminado
+    isAlumno: rol === 'alumno' || (rol === null && !loading),
   }
 
   return (
