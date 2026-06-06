@@ -67,13 +67,18 @@ export default function Login() {
     const dominio = email.split('@')[1]
     if (!dominio) { setError('Introduce un email válido'); setLoading(false); return }
 
-    const { data: centroCheck } = await supabase
-      .from('centros').select('id, nombre')
-      .eq('dominio', dominio).eq('activo', true).single()
-
-    if (!centroCheck) {
-      setError('Tu centro educativo no está registrado en Resetea. Contacta con tu orientador/a.')
-      setLoading(false); return
+    // En LOGIN: permitir alumnos individuales (sin centro)
+    // En REGISTRO: exigir dominio de centro
+    let centroCheck = null
+    if (isRegister) {
+      const { data } = await supabase
+        .from('centros').select('id, nombre')
+        .eq('dominio', dominio).eq('activo', true).maybeSingle()
+      centroCheck = data
+      if (!centroCheck) {
+        setError('Tu centro educativo no está registrado en Resetea. Si eres alumno individual, regístrate en /registro-individual')
+        setLoading(false); return
+      }
     }
 
     if (isRegister) {
@@ -128,13 +133,22 @@ export default function Login() {
 
         const userId = signInData.user?.id
         if (userId) {
+          // Comprobar si es docente
           const { data: docente } = await supabase
-            .from('perfiles_docentes').select('rol').eq('user_id', userId).single()
+            .from('perfiles_docentes').select('rol').eq('user_id', userId).maybeSingle()
           if (docente) {
             navigate('/docentes')
-          } else {
-            navigate('/')
+            return
           }
+          // Comprobar si es alumno individual (sin suscripción activa)
+          const { data: perfil } = await supabase
+            .from('perfiles_alumnos').select('subscription_status, centro_id').eq('user_id', userId).maybeSingle()
+          if (perfil && !perfil.centro_id && perfil.subscription_status !== 'active') {
+            // Alumno individual sin suscripción activa → redirigir a pago
+            navigate('/acceso-individual')
+            return
+          }
+          navigate('/')
         } else {
           navigate('/')
         }
@@ -283,6 +297,16 @@ export default function Login() {
           }} className="w-full text-sm text-teal-600 hover:text-teal-800 transition-colors pt-1">
             {isRegister ? '¿Ya tienes cuenta? Entra aquí' : '¿Primera vez? Crea tu cuenta'}
           </button>
+
+          <div className="border-t border-slate-100 pt-3">
+            <p className="text-center text-xs text-slate-400 mb-2">¿No tienes email de centro?</p>
+            <button
+              onClick={() => { window.location.href = '/registro-individual' }}
+              className="w-full py-2 rounded-xl text-sm font-semibold border-2 transition-all"
+              style={{ borderColor: '#0f6b6b', color: '#0f6b6b' }}>
+              Acceso individual · 29,99 €/curso
+            </button>
+          </div>
 
           <p className="text-center text-xs text-slate-400 pt-2 border-t border-slate-100">© 2026 Patricia Iso · Todos los derechos reservados</p>
         </div>
