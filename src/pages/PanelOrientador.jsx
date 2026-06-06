@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { supabase } from '@/api/supabaseClient'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -23,6 +24,13 @@ const NIVEL_COLOR = {
   'Severa (15+)':    { color: '#dc2626', bg: '#fee2e2' },
 }
 
+// ── K-ANONIMATO (RGPD art. 9 + LOPDGDD) ──────────────────────
+// Valores < K_UMBRAL no se muestran para evitar identificación
+// individual en grupos pequeños. Datos de salud = categoría especial.
+const K_UMBRAL = 5
+const maskVal = (v) => (v == null || v < K_UMBRAL) ? `<${K_UMBRAL}` : v
+const isMasked = (v) => (v == null || v < K_UMBRAL)
+
 // ── LOGIN ─────────────────────────────────────────────────────
 function LoginOrientador({ onAcceso }) {
   const [codigo, setCodigo] = useState('')
@@ -39,7 +47,7 @@ function LoginOrientador({ onAcceso }) {
         .select('*')
         .eq('codigo', codigo.trim().toUpperCase())
         .eq('activo', true)
-        .single()
+        .maybeSingle()
       if (error || !data) setError('Código incorrecto. Contacta con el administrador.')
       else onAcceso(data)
     } catch { setError('Error de conexión. Inténtalo de nuevo.') }
@@ -223,10 +231,102 @@ function Dashboard({ orientador, onSalir }) {
   const cargarGrupos = async () => {
     setLoadingGrupos(true)
     try {
-      const { data, error } = await supabase.rpc('get_orientador_datos_por_grupo', { p_centro_id: orientador.centro_id })
-      if (error) throw error
-      const parsed = typeof data === 'string' ? JSON.parse(data) : data
-      setGrupos(Array.isArray(parsed) ? parsed : [])
+      const centroId = orientador.centro_id
+
+      // 1. Obtener todos los perfiles de alumnos del centro (o individuales si no hay centro)
+      let query = supabase.from('perfiles_alumnos').select('user_id, curso, created_at')
+      if (centroId) query = query.eq('centro_id', centroId)
+      else query = query.is('centro_id', null)
+      const { data: perfiles, error: perfilesError } = await query
+      if (perfilesError) throw perfilesError
+      if (!perfiles || perfiles.length === 0) { setGrupos([]); return }
+
+      const ids = perfiles.map(p => p.user_id)
+      const hace7 = new Date(Date.now() - 7 * 86400000).toISOString()
+
+      // 2. Cargar sesiones y tests en paralelo
+      const [sResp, sRelaj, sAnclaje, sTest] = await Promise.all([
+        supabase.from('sesiones_respiracion').select('user_id, created_at').in('user_id', ids),
+        supabase.from('sesiones_relajacion').select('user_id, created_at').in('user_id', ids),
+        supabase.from('sesiones_anclaje').select('user_id, created_at').in('user_id', ids),
+        supabase.from('test_estres').select('user_id, puntuacion, created_at').in('user_id', ids),
+      ])
+
+      const sesResp   = sResp.data   || []
+      const sesRelaj  = sRelaj.data  || []
+      const sesAnclaje = sAnclaje.data || []
+      const tests     = sTest.data   || []
+
+      // 3. Agrupar por curso
+      const porCurso = {}
+      perfiles.forEach(p => {
+        const curso = p.curso || 'Sin curso'
+        if (!porCurso[curso]) porCurso[curso] = []
+        porCurso[curso].push(p.user_id)
+      })
+
+      // 4. Calcular métricas por curso
+      const ORDEN_CURSOS = [
+        '1º Primaria','2º Primaria','3º Primaria','4º Primaria','5º Primaria','6º Primaria',
+        '1º ESO','2º ESO','3º ESO','4º ESO',
+        '1º Bachillerato','2º Bachillerato',
+        'FP Básica','1º FP Medio','2º FP Medio','1º FP Superior','2º FP Superior','Sin curso'
+      ]
+
+      const grupos = Object.entries(porCurso)
+        .sort(([a], [b]) => {
+          const ia = ORDEN_CURSOS.indexOf(a)
+          const ib = ORDEN_CURSOS.indexOf(b)
+          return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib)
+        })
+        .map(([curso, userIds]) => {
+          const respCurso   = sesResp.filter(s => userIds.includes(s.user_id))
+          const relajCurso  = sesRelaj.filter(s => userIds.includes(s.user_id))
+          const anclajeCurso = sesAnclaje.filter(s => userIds.includes(s.user_id))
+          const testsCurso  = tests.filter(t => userIds.includes(t.user_id))
+
+          // Última sesión de respiración
+          const ultimaResp = respCurso.length > 0
+            ? respCurso.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0].created_at
+            : null
+          const ultimaRelaj = relajCurso.length > 0
+            ? relajCurso.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0].created_at
+            : null
+
+          // Ansiedad: tomar el test más reciente por usuario
+          const ultimoTestPorUser = {}
+          testsCurso.forEach(t => {
+            if (!ultimoTestPorUser[t.user_id] || t.created_at > ultimoTestPorUser[t.user_id].created_at)
+              ultimoTestPorUser[t.user_id] = t
+          })
+          const puntsCurso = Object.values(ultimoTestPorUser).map(t => t.puntuacion).filter(p => p != null)
+          const ansiedad_media = puntsCurso.length > 0
+            ? Math.round((puntsCurso.reduce((a, b) => a + b, 0) / puntsCurso.length) * 10) / 10
+            : null
+          const ansiedad_minima   = puntsCurso.filter(p => p <= 4).length
+          const ansiedad_leve     = puntsCurso.filter(p => p >= 5 && p <= 9).length
+          const ansiedad_moderada = puntsCurso.filter(p => p >= 10 && p <= 14).length
+          const ansiedad_severa   = puntsCurso.filter(p => p >= 15).length
+
+          return {
+            curso,
+            total_alumnos: userIds.length,
+            alumnos_con_test: puntsCurso.length,
+            sesiones_respiracion: respCurso.length,
+            sesiones_relajacion:  relajCurso.length,
+            sesiones_anclaje:     anclajeCurso.length,
+            respiracion_semana: respCurso.filter(s => s.created_at >= hace7).length,
+            ultima_sesion_respiracion: ultimaResp,
+            ultima_sesion_relajacion:  ultimaRelaj,
+            ansiedad_media,
+            ansiedad_minima,
+            ansiedad_leve,
+            ansiedad_moderada,
+            ansiedad_severa,
+          }
+        })
+
+      setGrupos(grupos)
     } catch (e) { console.error(e); setGrupos([]) }
     finally { setLoadingGrupos(false) }
   }
@@ -531,15 +631,25 @@ function Dashboard({ orientador, onSalir }) {
                 </div>
               ) : (
                 <>
+                  {/* ── AVISO PRIVACIDAD K-ANONIMATO ── */}
+                  <div className="bg-amber-50 rounded-2xl p-3 border border-amber-200 flex items-start gap-2">
+                    <span className="text-sm flex-shrink-0 mt-0.5">⚖️</span>
+                    <p className="text-amber-800 text-xs leading-relaxed">
+                      <strong>Protección de privacidad activa.</strong> Los valores inferiores a {K_UMBRAL} alumnos
+                      se muestran como "&lt;{K_UMBRAL}" para impedir la identificación individual.
+                      Cumplimiento RGPD art. 9 (datos de salud) y LOPDGDD.
+                    </p>
+                  </div>
+
                   {/* Alertas de grupos con ansiedad alta */}
-                  {grupos.some(g => g.ansiedad_severa > 0) && (
+                  {grupos.some(g => g.ansiedad_severa >= K_UMBRAL) && (
                     <div className="bg-red-50 rounded-2xl p-4 border border-red-200">
                       <p className="font-bold text-red-800 text-sm mb-2">🔴 Grupos con ansiedad severa</p>
                       <div className="space-y-1">
-                        {grupos.filter(g => g.ansiedad_severa > 0).map(g => (
+                        {grupos.filter(g => g.ansiedad_severa >= K_UMBRAL).map(g => (
                           <div key={g.curso} className="flex items-center justify-between text-xs bg-white rounded-xl px-3 py-2">
                             <span className="font-bold text-slate-700">{g.curso}</span>
-                            <span className="font-black text-red-600">{g.ansiedad_severa} alumno{g.ansiedad_severa > 1 ? 's' : ''} con ansiedad severa</span>
+                            <span className="font-black text-red-600">{maskVal(g.ansiedad_severa)} alumnos con ansiedad severa</span>
                           </div>
                         ))}
                       </div>
@@ -596,13 +706,17 @@ function Dashboard({ orientador, onSalir }) {
                                 { label: 'Moderada', val: g.ansiedad_moderada, color: '#ea580c', bg: '#ffedd5' },
                                 { label: 'Leve',     val: g.ansiedad_leve,     color: '#ca8a04', bg: '#fef9c3' },
                                 { label: 'Mínima',   val: g.ansiedad_minima,   color: '#16a34a', bg: '#dcfce7' },
-                              ].map(n => (
-                                <div key={n.label} className="rounded-lg p-1.5 text-center"
-                                  style={{ background: n.bg }}>
-                                  <p className="font-black text-sm" style={{ color: n.color }}>{n.val ?? 0}</p>
-                                  <p className="text-xs" style={{ color: n.color, fontSize: '9px' }}>{n.label}</p>
-                                </div>
-                              ))}
+                              ].map(n => {
+                                const mv = maskVal(n.val ?? 0)
+                                const masked = isMasked(n.val ?? 0)
+                                return (
+                                  <div key={n.label} className="rounded-lg p-1.5 text-center"
+                                    style={{ background: masked ? '#f8fafc' : n.bg, border: masked ? '1px dashed #e2e8f0' : 'none' }}>
+                                    <p className="font-black text-sm" style={{ color: masked ? '#94a3b8' : n.color }}>{mv}</p>
+                                    <p className="text-xs" style={{ color: masked ? '#94a3b8' : n.color, fontSize: '9px' }}>{n.label}</p>
+                                  </div>
+                                )
+                              })}
                             </div>
                           </div>
                         </div>
@@ -791,7 +905,10 @@ function Dashboard({ orientador, onSalir }) {
 
 // ── RAÍZ ─────────────────────────────────────────────────────
 export default function PanelOrientador() {
-  const [orientador, setOrientador] = useState(null)
+  const location = useLocation()
+  const [orientador, setOrientador] = useState(
+    location.state?.orientador ?? null
+  )
   return orientador
     ? <Dashboard orientador={orientador} onSalir={() => setOrientador(null)} />
     : <LoginOrientador onAcceso={setOrientador} />
