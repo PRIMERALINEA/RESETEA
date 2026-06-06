@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/lib/AuthContext'
 import { supabase } from '@/api/supabaseClient'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, X, ShieldCheck } from 'lucide-react'
@@ -60,6 +61,15 @@ export default function Login() {
   const [aceptaPolitica, setAceptaPolitica]   = useState(false)
   const [showPolitica, setShowPolitica]       = useState(false)
   const navigate = useNavigate()
+  const { user, rol, loading: authLoading } = useAuth()
+
+  // Redirigir cuando AuthContext termine de cargar la sesión
+  useEffect(() => {
+    if (!authLoading && user && rol !== null) {
+      if (rol === 'docente') navigate('/docentes', { replace: true })
+      else navigate('/', { replace: true })
+    }
+  }, [user, rol, authLoading, navigate])
 
   const handleSubmit = async () => {
     setLoading(true); setError(''); setSuccess('')
@@ -73,7 +83,7 @@ export default function Login() {
     if (isRegister) {
       const { data } = await supabase
         .from('centros').select('id, nombre')
-        .eq('dominio', dominio).eq('activo', true).maybeSingle()
+        .eq('dominio', dominio).eq('activo', true).single()
       centroCheck = data
       if (!centroCheck) {
         setError('Tu centro educativo no está registrado en Resetea. Si eres alumno individual, regístrate en /registro-individual')
@@ -135,14 +145,14 @@ export default function Login() {
         if (userId) {
           // Comprobar si es docente
           const { data: docente } = await supabase
-            .from('perfiles_docentes').select('rol').eq('user_id', userId).maybeSingle()
+            .from('perfiles_docentes').select('rol').eq('user_id', userId).single()
           if (docente) {
             navigate('/docentes')
             return
           }
           // Comprobar si es alumno individual (sin suscripción activa)
           const { data: perfil } = await supabase
-            .from('perfiles_alumnos').select('subscription_status, centro_id').eq('user_id', userId).maybeSingle()
+            .from('perfiles_alumnos').select('subscription_status, centro_id').eq('user_id', userId).single()
           if (perfil && !perfil.centro_id && perfil.subscription_status !== 'active') {
             // Alumno individual sin suscripción activa → redirigir a pago
             navigate('/acceso-individual')
