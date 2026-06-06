@@ -61,15 +61,15 @@ export default function Login() {
   const [aceptaPolitica, setAceptaPolitica]   = useState(false)
   const [showPolitica, setShowPolitica]       = useState(false)
   const navigate = useNavigate()
-  const { user, rol, loading: authLoading } = useAuth()
+  const { user, rol: authRol, loading: authLoading } = useAuth()
 
   // Redirigir cuando AuthContext termine de cargar la sesión
   useEffect(() => {
-    if (!authLoading && user && rol !== null) {
-      if (rol === 'docente') navigate('/docentes', { replace: true })
+    if (!authLoading && user && authRol !== null) {
+      if (authRol === 'docente') navigate('/docentes', { replace: true })
       else navigate('/', { replace: true })
     }
-  }, [user, rol, authLoading, navigate])
+  }, [user, authRol, authLoading, navigate])
 
   const handleSubmit = async () => {
     setLoading(true); setError(''); setSuccess('')
