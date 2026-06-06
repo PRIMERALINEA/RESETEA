@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { supabase } from '@/api/supabaseClient'
 import { Brain, Heart, Flame, ChevronDown, ChevronUp, Play, CheckCircle, AlertTriangle, BarChart2, Sparkles, Mic, MicOff, BookOpen, History, Trash2, Square, Lock, Eye, EyeOff } from 'lucide-react'
 
 const LOGO_URL = 'https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/WhatsApp%20Image%202026-04-06%20at%2015.58.04.jpeg'
@@ -276,13 +277,25 @@ export default function PanelDocente() {
   const [claveError, setClaveError] = useState(false)
   const [mostrarClave, setMostrarClave] = useState(false)
 
-  const accederOrientador = () => {
-    if (claveInput.toUpperCase() === 'RESETEA2025') {
-      setModalOrientador(false)
-      setClaveInput('')
-      setClaveError(false)
-      navigate('/orientador')
-    } else {
+  const accederOrientador = async () => {
+    if (!claveInput.trim()) return
+    try {
+      const { data, error } = await supabase
+        .from('orientadores')
+        .select('*')
+        .eq('codigo', claveInput.trim().toUpperCase())
+        .eq('activo', true)
+        .maybeSingle()
+      if (error || !data) {
+        setClaveError(true)
+        setTimeout(() => setClaveError(false), 2000)
+      } else {
+        setModalOrientador(false)
+        setClaveInput('')
+        setClaveError(false)
+        navigate('/orientador', { state: { orientador: data } })
+      }
+    } catch {
       setClaveError(true)
       setTimeout(() => setClaveError(false), 2000)
     }
