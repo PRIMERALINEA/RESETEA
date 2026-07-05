@@ -48,6 +48,7 @@ function speakNow(text, cancelRef) {
 
 async function speak(text, cancelRef) {
   if (cancelRef?.current) return
+  stopAudio()
   if (GOOGLE_TTS_KEY && ttsFailCount < TTS_FAIL_LIMIT) {
     const key = text.slice(0, 80)
     try {
@@ -189,7 +190,12 @@ export default function RelajacionJacobson() {
       const g = GROUPS[i]
       if (cancelRef.current) return
 
-      // Anunciar grupo
+      // La pantalla cambia de grupo ANTES de anunciarlo por voz. Si no, mientras
+      // suena "Ahora hombros y cuello" la pantalla seguía mostrando el grupo y la
+      // fase anteriores — el solape reportado.
+      setGroupIdx(i)
+      setPhase('anuncio')
+
       const anuncio = i === 0
         ? 'Empezamos con manos y brazos.'
         : `Ahora ${g.name}.`
@@ -197,12 +203,8 @@ export default function RelajacionJacobson() {
       if (cancelRef.current) return
 
       // ── FASE TENSIÓN ──────────────────────────────────────────────────
-      setGroupIdx(i)
       setPhase('tense')
 
-      // Esperamos a que termine de decir la instrucción antes de arrancar el contador.
-      // Antes se disparaba sin esperar y se asumían 7s fijos de silencio, lo que
-      // cortaba el audio si la frase tardaba más — causa real de la voz callándose.
       await speak(g.tenseText, cancelRef)
       if (cancelRef.current) return
 
@@ -323,8 +325,8 @@ export default function RelajacionJacobson() {
   }
 
   // ─── UI: running ─────────────────────────────────────────────────────────
-  const totalSecs = phase === 'tense' ? group.tense : group.relax
-  const progress = ((totalSecs - counter) / totalSecs) * 100
+  const totalSecs = phase === 'tense' ? group.tense : phase === 'relax' ? group.relax : 1
+  const progress = phase === 'anuncio' ? 0 : ((totalSecs - counter) / totalSecs) * 100
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6"
@@ -352,26 +354,34 @@ export default function RelajacionJacobson() {
           className="text-center max-w-sm w-full">
           <span className="text-6xl mb-4 block">{group.emoji}</span>
           <p className="text-white/40 text-xs tracking-widest mb-1">{group.name.toUpperCase()}</p>
-          <p className="text-3xl font-black mb-3" style={{ color: phase === 'tense' ? '#f87171' : '#4ade80' }}>
-            {phase === 'tense' ? 'TENSA' : 'SUELTA Y RELAJA'}
+          <p className="text-3xl font-black mb-3" style={{ color: phase === 'tense' ? '#f87171' : phase === 'relax' ? '#4ade80' : '#c4b5fd' }}>
+            {phase === 'anuncio' ? 'PREPÁRATE' : phase === 'tense' ? 'TENSA' : 'SUELTA Y RELAJA'}
           </p>
           <p className="text-white/60 text-sm leading-relaxed mb-8 px-4">
-            {phase === 'tense' ? group.tenseText : group.relaxText}
+            {phase === 'anuncio' ? `Vamos con ${group.name.toLowerCase()}.` : phase === 'tense' ? group.tenseText : group.relaxText}
           </p>
           <div className="relative w-28 h-28 mx-auto mb-6">
             <svg className="w-28 h-28 -rotate-90" viewBox="0 0 112 112">
               <circle cx="56" cy="56" r="48" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="6" />
-              <circle cx="56" cy="56" r="48" fill="none"
-                stroke={phase === 'tense' ? '#f87171' : '#4ade80'}
-                strokeWidth="6" strokeLinecap="round"
-                strokeDasharray={`${2 * Math.PI * 48}`}
-                strokeDashoffset={`${2 * Math.PI * 48 * (1 - progress / 100)}`}
-                style={{ transition: 'stroke-dashoffset 1s linear' }}
-              />
+              {phase !== 'anuncio' && (
+                <circle cx="56" cy="56" r="48" fill="none"
+                  stroke={phase === 'tense' ? '#f87171' : '#4ade80'}
+                  strokeWidth="6" strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 48}`}
+                  strokeDashoffset={`${2 * Math.PI * 48 * (1 - progress / 100)}`}
+                  style={{ transition: 'stroke-dashoffset 1s linear' }}
+                />
+              )}
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <p className="text-white font-black text-2xl">{counter}</p>
-              <p className="text-white/40 text-xs">seg</p>
+              {phase === 'anuncio'
+                ? <span className="text-2xl">{group.emoji}</span>
+                : (
+                  <>
+                    <p className="text-white font-black text-2xl">{counter}</p>
+                    <p className="text-white/40 text-xs">seg</p>
+                  </>
+                )}
             </div>
           </div>
           <p className="text-white/20 text-xs">Grupo {groupIdx + 1} de {GROUPS.length}</p>

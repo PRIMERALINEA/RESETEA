@@ -8,10 +8,6 @@ import { ArrowLeft, ChevronRight, CheckCircle, Volume2, Play, AlertCircle, Zap, 
 const GOOGLE_TTS_KEY = import.meta.env.VITE_GOOGLE_TTS_KEY
 const audioCache = {}
 let activeAudio = null
-
-const GOOGLE_TTS_KEY = import.meta.env.VITE_GOOGLE_TTS_KEY
-const audioCache = {}
-let activeAudio = null
 let ttsFailCount = 0
 const TTS_FAIL_LIMIT = 2
 

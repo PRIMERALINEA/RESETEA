@@ -4,7 +4,7 @@ import { supabase } from '@/api/supabaseClient'
 import { useNavigate } from 'react-router-dom'
 
 const PHASE_DURATION = 4000
-const PAUSE_DURATION = 800 // la fase 4 (reten2) ya actúa como pausa de 4s; esto es solo margen entre ciclos, no una segunda pausa completa
+const PAUSE_DURATION = 3000 // margen real tras cada ciclo: 500ms antes de que suene "Ciclo X completado" + ~2.5s para que la frase termine antes del siguiente "Inhala". Con 800ms se solapaban.
 const TOTAL_CYCLES   = 4
 const INTRO_DURATION = 8000 // tiempo reservado para la intro de voz antes de empezar ciclos
 
@@ -57,6 +57,10 @@ function speakNow(text, cancelRef) {
 
 async function speak(text, cancelRef) {
   if (cancelRef?.current) return
+  // Parada defensiva: si quedara cualquier audio anterior sonando (Google TTS o
+  // voz del navegador) por solape de tiempos, lo cortamos antes de empezar el nuevo.
+  // Sin esto, dos <audio> de Google TTS pueden sonar a la vez sin que nada los pare.
+  stopAudio()
   if (GOOGLE_TTS_KEY && ttsFailCount < TTS_FAIL_LIMIT) {
     const key = text.slice(0, 80)
     try {
@@ -97,6 +101,37 @@ async function speak(text, cancelRef) {
     }
   }
   return speakNow(text, cancelRef)
+}
+
+// Precarga el audio de un texto en caché SIN reproducirlo. Se usa para que las
+// frases "Ciclo X completado" (distintas cada vez, nunca cacheadas de antemano)
+// no dependan de la latencia de red de Google TTS justo en el instante en que
+// el guion las necesita — que es lo que seguía causando el solape con "Inhala".
+async function prefetchAudio(text) {
+  if (!GOOGLE_TTS_KEY || ttsFailCount >= TTS_FAIL_LIMIT) return
+  const key = text.slice(0, 80)
+  if (audioCache[key]) return
+  try {
+    const res = await fetch(
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          input: { text },
+          voice: { languageCode: 'es-ES', name: 'es-ES-Wavenet-C', ssmlGender: 'FEMALE' },
+          audioConfig: { audioEncoding: 'MP3', speakingRate: 0.85, pitch: 0.0 }
+        })
+      }
+    )
+    if (!res.ok) return
+    const { audioContent } = await res.json()
+    if (!audioContent) return
+    const blob = await fetch(`data:audio/mp3;base64,${audioContent}`).then(r => r.blob())
+    audioCache[key] = URL.createObjectURL(blob)
+  } catch (e) {
+    console.error('Prefetch TTS error:', e)
+  }
 }
 
 export default function RespiracionCuadrada() {
@@ -149,6 +184,12 @@ export default function RespiracionCuadrada() {
     clearAll()
     setState('running')
     setCycle(0); setPhaseIdx(0); setIsPaused(false); setCounter(4); setSaved(false); setIntroLista(false)
+
+    // Precarga en paralelo, sin esperar: para cuando el setTimeout de cada ciclo
+    // necesite "Muy bien. Ciclo X completado.", el audio ya está en caché y no
+    // depende de la latencia de red de Google TTS en ese instante exacto.
+    ;['Muy bien. Ciclo 1 completado.', 'Muy bien. Ciclo 2 completado.', 'Muy bien. Ciclo 3 completado.']
+      .forEach(t => prefetchAudio(t))
 
     // Intro de voz secuencial — NO empieza el RAF hasta que termina
     await speak('Siéntate cómodo y cierra los ojos.', cancelRef)
