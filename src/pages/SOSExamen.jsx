@@ -9,27 +9,47 @@ const GOOGLE_TTS_KEY = import.meta.env.VITE_GOOGLE_TTS_KEY
 const audioCache = {}
 let activeAudio = null
 
+const GOOGLE_TTS_KEY = import.meta.env.VITE_GOOGLE_TTS_KEY
+const audioCache = {}
+let activeAudio = null
+let ttsFailCount = 0
+const TTS_FAIL_LIMIT = 2
+
 function stopAudio() {
   if (activeAudio) { activeAudio.pause(); activeAudio.currentTime = 0; activeAudio = null }
-  window.speechSynthesis?.cancel()
+  if (window.speechSynthesis?.speaking) window.speechSynthesis.cancel()
 }
 
-function speakNow(text) {
+function speakNow(text, cancelRef) {
+  if (!window.speechSynthesis) return Promise.resolve()
   return new Promise(resolve => {
-    if (!window.speechSynthesis) { resolve(); return }
-    window.speechSynthesis.cancel()
-    const u = new SpeechSynthesisUtterance(text)
-    u.lang = 'es-ES'; u.rate = 0.72; u.pitch = 1.05; u.volume = 1.0; u.onend = resolve
-    const voices = window.speechSynthesis.getVoices()
-    const fem = voices.find(v => v.lang === 'es-ES') || voices.find(v => v.lang.startsWith('es'))
-    if (fem) u.voice = fem
-    window.speechSynthesis.speak(u)
+    if (cancelRef?.current) { resolve(); return }
+    const doSpeak = () => {
+      if (cancelRef?.current) { resolve(); return }
+      const u = new SpeechSynthesisUtterance(String(text))
+      u.lang = 'es-ES'; u.rate = 0.72; u.pitch = 1.05; u.volume = 1.0
+      u.onend = resolve
+      u.onerror = resolve
+      const voices = window.speechSynthesis.getVoices()
+      const fem = voices.find(v => v.lang === 'es-ES') || voices.find(v => v.lang.startsWith('es'))
+      if (fem) u.voice = fem
+      window.speechSynthesis.speak(u)
+    }
+    if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+      window.speechSynthesis.cancel()
+      setTimeout(() => {
+        if (window.speechSynthesis.getVoices().length > 0) doSpeak()
+        else window.speechSynthesis.onvoiceschanged = doSpeak
+      }, 50)
+    } else if (window.speechSynthesis.getVoices().length > 0) doSpeak()
+    else window.speechSynthesis.onvoiceschanged = doSpeak
   })
 }
 
-async function speak(text) {
-  if (GOOGLE_TTS_KEY) {
-    const key = text.slice(0, 80)
+async function speak(text, cancelRef) {
+  if (cancelRef?.current) return
+  if (GOOGLE_TTS_KEY && ttsFailCount < TTS_FAIL_LIMIT) {
+    const key = String(text).slice(0, 80)
     try {
       if (!audioCache[key]) {
         const res = await fetch(
@@ -38,27 +58,36 @@ async function speak(text) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              input: { text },
+              input: { text: String(text) },
               voice: { languageCode: 'es-ES', name: 'es-ES-Wavenet-C', ssmlGender: 'FEMALE' },
               audioConfig: { audioEncoding: 'MP3', speakingRate: 0.82, pitch: 0.0 }
             })
           }
         )
-        if (!res.ok) throw new Error('Google TTS error')
+        if (!res.ok) throw new Error(`Google TTS HTTP ${res.status}`)
         const { audioContent } = await res.json()
+        if (!audioContent) throw new Error('Google TTS: respuesta sin audioContent')
         const blob = await fetch(`data:audio/mp3;base64,${audioContent}`).then(r => r.blob())
         audioCache[key] = URL.createObjectURL(blob)
       }
-      return new Promise(resolve => {
+      if (cancelRef?.current) return
+      await new Promise((resolve, reject) => {
         const audio = new Audio(audioCache[key])
         audio.volume = 0.95
         activeAudio = audio
         audio.onended = () => { activeAudio = null; resolve() }
-        audio.play()
+        audio.onerror = () => { activeAudio = null; reject(new Error('Google TTS: audio.play() falló')) }
+        audio.play().catch(reject)
       })
-    } catch (e) { console.error('Google TTS error:', e) }
+      ttsFailCount = 0
+      return
+    } catch (e) {
+      ttsFailCount++
+      console.error(`Google TTS error (fallo ${ttsFailCount}/${TTS_FAIL_LIMIT}):`, e)
+      delete audioCache[key]
+    }
   }
-  return speakNow(text)
+  return speakNow(text, cancelRef)
 }
 
 // ── SLIDER MALESTAR ───────────────────────────────────────────────────────
@@ -383,9 +412,9 @@ function MapaCorporal({ onBack }) {
 
 // ── TÉCNICA 2B: MICRO-RELAJACIÓN ─────────────────────────────────────────
 const MICRO_PASOS_JACOBSON = [
-  { zona: 'Hombros', instruccion: 'Sube los hombros hacia las orejas... aguanta...', relax: 'Suelta. Siente el calor.', tense: 3, relax: 10 },
-  { zona: 'Mandíbula', instruccion: 'Aprieta la mandíbula... aguanta...', relax: 'Suelta. Relaja la cara.', tense: 3, relax: 10 },
-  { zona: 'Puños', instruccion: 'Aprieta los puños con fuerza... aguanta...', relax: 'Suelta. Deja caer las manos.', tense: 3, relax: 10 },
+  { zona: 'Hombros', instruccion: 'Sube los hombros hacia las orejas... aguanta...', mensajeRelax: 'Suelta. Siente el calor.', tense: 3, relaxSecs: 10 },
+  { zona: 'Mandíbula', instruccion: 'Aprieta la mandíbula... aguanta...', mensajeRelax: 'Suelta. Relaja la cara.', tense: 3, relaxSecs: 10 },
+  { zona: 'Puños', instruccion: 'Aprieta los puños con fuerza... aguanta...', mensajeRelax: 'Suelta. Deja caer las manos.', tense: 3, relaxSecs: 10 },
 ]
 
 function MicroRelajacion({ onBack }) {
@@ -411,8 +440,8 @@ function MicroRelajacion({ onBack }) {
           clearInterval(timerRef.current)
           if (fase === 'tense') {
             setFase('relax')
-            setCounter(MICRO_PASOS_JACOBSON[pasoIdx].relax)
-            speak(MICRO_PASOS_JACOBSON[pasoIdx].relax)
+            setCounter(MICRO_PASOS_JACOBSON[pasoIdx].relaxSecs)
+            speak(MICRO_PASOS_JACOBSON[pasoIdx].mensajeRelax)
           } else {
             const next = pasoIdx + 1
             if (next >= MICRO_PASOS_JACOBSON.length) {
@@ -474,7 +503,7 @@ function MicroRelajacion({ onBack }) {
           </div>
           <div className="bg-slate-50 rounded-2xl p-4 text-center">
             <p className="font-bold text-slate-800">{paso.zona}</p>
-            <p className="text-slate-600 text-sm mt-1">{fase === 'tense' ? paso.instruccion : paso.relax}</p>
+            <p className="text-slate-600 text-sm mt-1">{fase === 'tense' ? paso.instruccion : paso.mensajeRelax}</p>
           </div>
         </div>
       )}
