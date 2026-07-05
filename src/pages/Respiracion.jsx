@@ -7,35 +7,46 @@ import { useNavigate } from 'react-router-dom'
 const GOOGLE_TTS_KEY = import.meta.env.VITE_GOOGLE_TTS_KEY
 const audioCache = {}
 let activeAudio = null
+let ttsFailCount = 0
+const TTS_FAIL_LIMIT = 2 // tras N fallos seguidos de Google TTS, se deja de reintentar en esta sesión
 
 function stopAudio() {
   if (activeAudio) { activeAudio.pause(); activeAudio.currentTime = 0; activeAudio = null }
-  window.speechSynthesis?.cancel()
+  if (window.speechSynthesis?.speaking) window.speechSynthesis.cancel()
 }
 
 function speakNow(text, cancelRef) {
   if (!window.speechSynthesis) return Promise.resolve()
-  window.speechSynthesis.cancel()
   return new Promise(resolve => {
     if (cancelRef?.current) { resolve(); return }
-    const u = new SpeechSynthesisUtterance(text)
-    u.lang = 'es-ES'; u.rate = 0.78; u.pitch = 1.1; u.volume = 1.0
-    u.onend = resolve
-    const loadVoice = () => {
+    const doSpeak = () => {
+      if (cancelRef?.current) { resolve(); return }
+      const u = new SpeechSynthesisUtterance(text)
+      u.lang = 'es-ES'; u.rate = 0.78; u.pitch = 1.1; u.volume = 1.0
+      u.onend = resolve
+      u.onerror = resolve
       const voices = window.speechSynthesis.getVoices()
       const fem = voices.find(v => v.lang === 'es-ES' && /female|mujer|mónica|lucia|elena|paulina/i.test(v.name))
         || voices.find(v => v.lang.startsWith('es'))
       if (fem) u.voice = fem
       window.speechSynthesis.speak(u)
     }
-    if (window.speechSynthesis.getVoices().length > 0) loadVoice()
-    else window.speechSynthesis.onvoiceschanged = loadVoice
+    // Bug conocido de Chrome: cancel()+speak() seguidos a veces disparan onend sin sonar.
+    // Si el motor está ocupado, cancelamos y esperamos un tick antes de encolar.
+    if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+      window.speechSynthesis.cancel()
+      setTimeout(() => {
+        if (window.speechSynthesis.getVoices().length > 0) doSpeak()
+        else window.speechSynthesis.onvoiceschanged = doSpeak
+      }, 50)
+    } else if (window.speechSynthesis.getVoices().length > 0) doSpeak()
+    else window.speechSynthesis.onvoiceschanged = doSpeak
   })
 }
 
 async function speak(text, cancelRef) {
   if (cancelRef?.current) return
-  if (GOOGLE_TTS_KEY) {
+  if (GOOGLE_TTS_KEY && ttsFailCount < TTS_FAIL_LIMIT) {
     const key = text.slice(0, 80)
     try {
       if (!audioCache[key]) {
@@ -51,20 +62,28 @@ async function speak(text, cancelRef) {
             })
           }
         )
-        if (!res.ok) throw new Error('Google TTS error')
+        if (!res.ok) throw new Error(`Google TTS HTTP ${res.status}`)
         const { audioContent } = await res.json()
+        if (!audioContent) throw new Error('Google TTS: respuesta sin audioContent')
         const blob = await fetch(`data:audio/mp3;base64,${audioContent}`).then(r => r.blob())
         audioCache[key] = URL.createObjectURL(blob)
       }
       if (cancelRef?.current) return
-      return new Promise(resolve => {
+      await new Promise((resolve, reject) => {
         const audio = new Audio(audioCache[key])
         audio.volume = 0.95
         activeAudio = audio
         audio.onended = () => { activeAudio = null; resolve() }
-        audio.play()
+        audio.onerror = () => { activeAudio = null; reject(new Error('Google TTS: audio.play() falló')) }
+        audio.play().catch(reject)
       })
-    } catch (e) { console.error('Google TTS error:', e) }
+      ttsFailCount = 0
+      return
+    } catch (e) {
+      ttsFailCount++
+      console.error(`Google TTS error (fallo ${ttsFailCount}/${TTS_FAIL_LIMIT}):`, e)
+      delete audioCache[key]
+    }
   }
   return speakNow(text, cancelRef)
 }

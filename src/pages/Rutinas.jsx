@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { Sun, Moon, BookOpen, ChevronRight, Play, CheckCircle } from 'lucide-react'
+import { supabase } from '@/api/supabaseClient'
 
 const RUTINAS = [
   {
@@ -63,8 +64,31 @@ function RutinaEjercicio({ rutina, onBack }) {
   const [activo, setActivo] = useState(false)
   const [completados, setCompletados] = useState([])
   const [finalizado, setFinalizado] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
   const navigate = useNavigate()
   const timerRef = React.useRef(null)
+  const startTimeRef = useRef(Date.now())
+
+  const saveSession = async () => {
+    if (saving || saved) return
+    setSaving(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const duracion = Math.round((Date.now() - startTimeRef.current) / 1000)
+      await supabase.from('sesiones_rutinas').insert({
+        user_id: user.id,
+        rutina_id: rutina.id,
+        rutina_nombre: rutina.nombre,
+        pasos_completados: rutina.pasos.length,
+        duracion_segundos: duracion,
+        created_at: new Date().toISOString(),
+      })
+      setSaved(true)
+    } catch (e) { console.error(e) }
+    finally { setSaving(false) }
+  }
 
   const paso = rutina.pasos[pasoIdx]
 
@@ -93,6 +117,7 @@ function RutinaEjercicio({ rutina, onBack }) {
       setCounter(null)
     } else {
       setFinalizado(true)
+      saveSession()
     }
   }
 
@@ -105,6 +130,9 @@ function RutinaEjercicio({ rutina, onBack }) {
           <CheckCircle className="w-16 h-16 text-green-400" />
           <p className="text-white text-2xl font-black">¡Rutina completada! {rutina.emoji}</p>
           <p className="text-white/60 text-sm max-w-xs">Has completado los {rutina.pasos.length} pasos de tu rutina de {rutina.nombre.toLowerCase()}.</p>
+          <p className="text-xs" style={{ color: saved ? '#4ade80' : saving ? '#fbbf24' : 'rgba(255,255,255,0.3)' }}>
+            {saved ? '✓ Sesión guardada' : saving ? 'Guardando...' : ''}
+          </p>
           <button onClick={onBack}
             className="px-8 py-3 rounded-2xl text-white font-bold mt-2"
             style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}>

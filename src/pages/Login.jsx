@@ -314,7 +314,7 @@ export default function Login() {
               onClick={() => { window.location.href = '/registro-individual' }}
               className="w-full py-2 rounded-xl text-sm font-semibold border-2 transition-all"
               style={{ borderColor: '#0f6b6b', color: '#0f6b6b' }}>
-              Acceso individual · 29,99 €/curso
+              Acceso individual · 4,99 €/mes
             </button>
           </div>
 

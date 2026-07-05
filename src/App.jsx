@@ -26,10 +26,11 @@ import Bienestar from '@/pages/Bienestar'
 import ModuloFamilias from '@/pages/ModuloFamilias'
 import AccesoIndividual from '@/pages/AccesoIndividual'
 import RegistroIndividual from '@/pages/RegistroIndividual'
+import PagoExitoso from '@/pages/PagoExitoso'
 import Layout from '@/components/Layout'
 import { RgpdBanner, useRgpdConsent, PoliticaPrivacidad } from '@/components/RgpdBanner'
 
-// ── Spinner de carga ──────────────────────────────────────────────────────
+// -- Spinner de carga --
 function Spinner() {
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: '#f0f9f9' }}>
@@ -38,7 +39,7 @@ function Spinner() {
   )
 }
 
-// ── Ruta protegida genérica (requiere login) ──────────────────────────────
+// -- Ruta protegida generica (requiere login) --
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return <Spinner />
@@ -46,31 +47,28 @@ function ProtectedRoute({ children }) {
   return children
 }
 
-// ── Ruta exclusiva para alumnos ───────────────────────────────────────────
+// -- Ruta exclusiva para alumnos --
 function AlumnoRoute({ children }) {
   const { user, loading, rol } = useAuth()
   if (loading) return <Spinner />
   if (!user) return <Navigate to="/login" replace />
-  // Si es docente, redirigir a su panel
   if (rol === 'docente') return <Navigate to="/docentes" replace />
   return children
 }
 
-// ── Ruta exclusiva para docentes ──────────────────────────────────────────
-// FIX 3: si rol es null y loading ha terminado, no es docente → redirigir a home de alumno
+// -- Ruta exclusiva para docentes --
 function DocenteRoute({ children }) {
   const { user, loading, rol } = useAuth()
   if (loading) return <Spinner />
   if (!user) return <Navigate to="/login" replace />
-  // rol null tras carga completa = no es docente
   if (rol === null || rol === 'alumno') return <Navigate to="/" replace />
   return children
 }
 
-// ── Wrappers con layout ───────────────────────────────────────────────────
-const AL = ({ children }) => <AlumnoRoute><Layout>{children}</Layout></AlumnoRoute>   // alumno + layout
-const DL = ({ children }) => <DocenteRoute><Layout>{children}</Layout></DocenteRoute>  // docente + layout
-const P  = ({ children }) => <ProtectedRoute>{children}</ProtectedRoute>               // solo auth, sin layout
+// -- Wrappers con layout --
+const AL = ({ children }) => <AlumnoRoute><Layout>{children}</Layout></AlumnoRoute>
+const DL = ({ children }) => <DocenteRoute><Layout>{children}</Layout></DocenteRoute>
+const P  = ({ children }) => <ProtectedRoute>{children}</ProtectedRoute>
 
 export default function App() {
   const { consentDado, darConsent } = useRgpdConsent()
@@ -80,14 +78,15 @@ export default function App() {
       {!consentDado && <RgpdBanner onAceptar={darConsent} />}
       <Routes>
 
-        {/* ── Pública ── */}
+        {/* -- Publica -- */}
         <Route path="/login" element={<Login />} />
         <Route path="/privacidad" element={<PoliticaPrivacidad />} />
         <Route path="/orientador" element={<PanelOrientador />} />
         <Route path="/acceso-individual" element={<AccesoIndividual />} />
         <Route path="/registro-individual" element={<RegistroIndividual />} />
+        <Route path="/pago-exitoso" element={<PagoExitoso />} />
 
-        {/* ── Rutas de ALUMNO (solo alumno) ── */}
+        {/* -- Rutas de ALUMNO (solo alumno) -- */}
         <Route path="/"                  element={<AL><Home /></AL>} />
         <Route path="/diario"            element={<AL><Diario /></AL>} />
         <Route path="/test-estres"       element={<AL><TestEstres /></AL>} />
@@ -101,7 +100,7 @@ export default function App() {
         <Route path="/bienestar"         element={<AL><Bienestar /></AL>} />
         <Route path="/familias"          element={<AL><ModuloFamilias /></AL>} />
 
-        {/* ── Rutas compartidas (alumno y docente) ── */}
+        {/* -- Rutas compartidas (alumno y docente) -- */}
         <Route path="/respiracion"       element={<ProtectedRoute><Layout><Respiracion /></Layout></ProtectedRoute>} />
         <Route path="/anclajes"          element={<ProtectedRoute><Layout><Anclajes /></Layout></ProtectedRoute>} />
         <Route path="/relajacion"        element={<ProtectedRoute><Layout><Relajacion /></Layout></ProtectedRoute>} />
@@ -111,10 +110,10 @@ export default function App() {
         <Route path="/perfil" element={<ProtectedRoute><Layout><MiPerfil /></Layout></ProtectedRoute>} />
         <Route path="/admin"  element={<ProtectedRoute><Layout><AdminDashboard /></Layout></ProtectedRoute>} />
 
-        {/* ── Rutas de DOCENTE (solo docente) ── */}
+        {/* -- Rutas de DOCENTE (solo docente) -- */}
         <Route path="/docentes" element={<DL><PanelDocente /></DL>} />
 
-        {/* ── Fallback ── */}
+        {/* -- Fallback -- */}
         <Route path="*" element={<Navigate to="/" replace />} />
 
       </Routes>

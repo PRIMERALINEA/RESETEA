@@ -4,36 +4,66 @@ import { supabase } from '@/api/supabaseClient'
 import { useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, ChevronRight, CheckCircle, Volume2, Play, AlertCircle, Brain } from 'lucide-react'
 
-const VOICE_ID = 'RgXx32WYOGrd7gFNifSf'
-const XI_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY
+const GOOGLE_TTS_KEY = import.meta.env.VITE_GOOGLE_TTS_KEY
 const audioCache = {}
+let activeAudio = null
+
+function stopAudio() {
+  if (activeAudio) { activeAudio.pause(); activeAudio.currentTime = 0; activeAudio = null }
+  window.speechSynthesis?.cancel()
+}
+
+function speakNow(text) {
+  if (!window.speechSynthesis) return Promise.resolve()
+  window.speechSynthesis.cancel()
+  return new Promise(resolve => {
+    const u = new SpeechSynthesisUtterance(text)
+    u.lang = 'es-ES'; u.rate = 0.78; u.pitch = 1.1; u.volume = 1.0
+    u.onend = resolve
+    const loadVoice = () => {
+      const voices = window.speechSynthesis.getVoices()
+      const fem = voices.find(v => v.lang === 'es-ES' && /female|mujer|mónica|lucia|elena|paulina/i.test(v.name))
+        || voices.find(v => v.lang.startsWith('es'))
+      if (fem) u.voice = fem
+      window.speechSynthesis.speak(u)
+    }
+    if (window.speechSynthesis.getVoices().length > 0) loadVoice()
+    else window.speechSynthesis.onvoiceschanged = loadVoice
+  })
+}
 
 async function speak(text) {
-  if (XI_API_KEY) {
-    const key = `${VOICE_ID}_${text.slice(0, 40)}`
+  if (GOOGLE_TTS_KEY) {
+    const key = text.slice(0, 80)
     try {
       if (!audioCache[key]) {
-        const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
-          method: 'POST',
-          headers: { 'xi-api-key': XI_API_KEY, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, model_id: 'eleven_multilingual_v2',
-            voice_settings: { stability: 0.85, similarity_boost: 0.85, style: 0.15, use_speaker_boost: true } })
-        })
-        if (!res.ok) throw new Error()
-        audioCache[key] = URL.createObjectURL(await res.blob())
+        const res = await fetch(
+          `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              input: { text },
+              voice: { languageCode: 'es-ES', name: 'es-ES-Wavenet-C', ssmlGender: 'FEMALE' },
+              audioConfig: { audioEncoding: 'MP3', speakingRate: 0.85, pitch: 0.0 }
+            })
+          }
+        )
+        if (!res.ok) throw new Error('Google TTS error')
+        const { audioContent } = await res.json()
+        const blob = await fetch(`data:audio/mp3;base64,${audioContent}`).then(r => r.blob())
+        audioCache[key] = URL.createObjectURL(blob)
       }
-      return new Promise(r => { const a = new Audio(audioCache[key]); a.onended = r; a.play() })
-    } catch {}
+      return new Promise(resolve => {
+        const audio = new Audio(audioCache[key])
+        audio.volume = 0.95
+        activeAudio = audio
+        audio.onended = () => { activeAudio = null; resolve() }
+        audio.play()
+      })
+    } catch (e) { console.error('Google TTS error:', e) }
   }
-  return new Promise(r => {
-    if (!window.speechSynthesis) { r(); return }
-    window.speechSynthesis.cancel()
-    const u = new SpeechSynthesisUtterance(text)
-    u.lang = 'es-ES'; u.rate = 0.72; u.pitch = 1.05; u.volume = 1.0; u.onend = r
-    const v = window.speechSynthesis.getVoices().find(v => v.lang === 'es-ES')
-    if (v) u.voice = v
-    window.speechSynthesis.speak(u)
-  })
+  return speakNow(text)
 }
 
 // ── PANTALLA 1: INTRO ─────────────────────────────────────────────────────
@@ -392,6 +422,9 @@ function PantallaPrevension({ onComplete }) {
         await supabase.from('progreso_modulo').upsert({
           user_id: user.id, modulo_id: 'quedo_en_blanco', sesion_id: 'completo', completada: true
         }, { onConflict: 'user_id,modulo_id,sesion_id' })
+        await supabase.from('sesiones_modulos').insert({
+          user_id: user.id, modulo_id: 'quedo_en_blanco', modulo_nombre: 'Cuando me quedo en blanco', sesion_numero: 1, completada: true
+        })
       }
       onComplete()
     } catch { onComplete() }

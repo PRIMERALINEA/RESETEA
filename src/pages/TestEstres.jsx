@@ -52,16 +52,8 @@ export default function TestEstres() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Obtener centro_id del perfil del alumno
-      const { data: perfil } = await supabase
-        .from('perfiles_alumnos')
-        .select('centro_id')
-        .eq('user_id', user.id)
-        .single()
-
       await supabase.from('test_estres').insert({
         user_id: user.id,
-        centro_id: perfil?.centro_id || null,
         tipo: 'gad7_adaptado',
         puntuacion: resultado.score,
         nivel: resultado.label,

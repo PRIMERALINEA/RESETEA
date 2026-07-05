@@ -258,6 +258,14 @@ export default function Layout({ children }) {
               <LogOut className="w-5 h-5" />
               <span className="font-medium text-sm">Cerrar sesión</span>
             </button>
+            <a href="mailto:reseteaacademica@gmail.com"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all"
+              style={{ color: 'rgba(255,255,255,0.35)' }}
+              onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.35)'}>
+              <span className="text-sm">✉️</span>
+              <span className="font-medium text-xs">reseteaacademica@gmail.com</span>
+            </a>
           </div>
         </div>
       </aside>
