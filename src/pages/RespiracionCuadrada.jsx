@@ -20,8 +20,25 @@ const PHASE_SUBTITLES = ['por la nariz', 'el aire', 'por la boca', 'y descansa']
 const GOOGLE_TTS_KEY = import.meta.env.VITE_GOOGLE_TTS_KEY
 const audioCache = {}
 let activeAudio = null
+let ttsAudioEl = null
 let ttsFailCount = 0
 const TTS_FAIL_LIMIT = 2
+
+// Debe llamarse de forma SÍNCRONA dentro del propio onClick que inicia el
+// ejercicio, antes de cualquier await. iOS/WebKit exige que la primera
+// reproducción de audio y de voz esté vinculada directamente al toque; si no,
+// bloquea en silencio las reproducciones posteriores disparadas por
+// temporizador — el patrón exacto de "empieza con voz y luego se calla".
+function unlockAudio() {
+  if (!ttsAudioEl) ttsAudioEl = new Audio()
+  ttsAudioEl.play().catch(() => {})
+  ttsAudioEl.pause()
+  if (window.speechSynthesis) {
+    const u = new SpeechSynthesisUtterance('')
+    u.volume = 0
+    window.speechSynthesis.speak(u)
+  }
+}
 
 function stopAudio() {
   if (activeAudio) { activeAudio.pause(); activeAudio.currentTime = 0; activeAudio = null }
@@ -85,12 +102,13 @@ async function speak(text, cancelRef) {
       }
       if (cancelRef?.current) return
       await new Promise((resolve, reject) => {
-        const audio = new Audio(audioCache[key])
-        audio.volume = 0.95
-        activeAudio = audio
-        audio.onended = () => { activeAudio = null; resolve() }
-        audio.onerror = () => { activeAudio = null; reject(new Error('Google TTS: audio.play() falló')) }
-        audio.play().catch(reject)
+        if (!ttsAudioEl) ttsAudioEl = new Audio()
+        ttsAudioEl.src = audioCache[key]
+        ttsAudioEl.volume = 0.95
+        activeAudio = ttsAudioEl
+        ttsAudioEl.onended = () => { activeAudio = null; resolve() }
+        ttsAudioEl.onerror = () => { activeAudio = null; reject(new Error('Google TTS: audio.play() falló')) }
+        ttsAudioEl.play().catch(reject)
       })
       ttsFailCount = 0
       return
@@ -346,7 +364,7 @@ export default function RespiracionCuadrada() {
                 </div>
               ))}
             </div>
-            <button onClick={start}
+            <button onClick={() => { unlockAudio(); start() }}
               className="px-10 py-4 rounded-2xl text-white font-black tracking-widest text-sm"
               style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}>
               INICIAR CON VOZ

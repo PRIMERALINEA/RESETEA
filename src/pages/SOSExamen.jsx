@@ -8,8 +8,22 @@ import { ArrowLeft, ChevronRight, CheckCircle, Volume2, Play, AlertCircle, Zap, 
 const GOOGLE_TTS_KEY = import.meta.env.VITE_GOOGLE_TTS_KEY
 const audioCache = {}
 let activeAudio = null
+let ttsAudioEl = null
 let ttsFailCount = 0
 const TTS_FAIL_LIMIT = 2
+
+// Debe llamarse de forma SÍNCRONA dentro del onClick que inicia cada técnica,
+// antes de cualquier await. Ver nota completa en RespiracionCuadrada.jsx.
+function unlockAudio() {
+  if (!ttsAudioEl) ttsAudioEl = new Audio()
+  ttsAudioEl.play().catch(() => {})
+  ttsAudioEl.pause()
+  if (window.speechSynthesis) {
+    const u = new SpeechSynthesisUtterance('')
+    u.volume = 0
+    window.speechSynthesis.speak(u)
+  }
+}
 
 function stopAudio() {
   if (activeAudio) { activeAudio.pause(); activeAudio.currentTime = 0; activeAudio = null }
@@ -68,12 +82,13 @@ async function speak(text, cancelRef) {
       }
       if (cancelRef?.current) return
       await new Promise((resolve, reject) => {
-        const audio = new Audio(audioCache[key])
-        audio.volume = 0.95
-        activeAudio = audio
-        audio.onended = () => { activeAudio = null; resolve() }
-        audio.onerror = () => { activeAudio = null; reject(new Error('Google TTS: audio.play() falló')) }
-        audio.play().catch(reject)
+        if (!ttsAudioEl) ttsAudioEl = new Audio()
+        ttsAudioEl.src = audioCache[key]
+        ttsAudioEl.volume = 0.95
+        activeAudio = ttsAudioEl
+        ttsAudioEl.onended = () => { activeAudio = null; resolve() }
+        ttsAudioEl.onerror = () => { activeAudio = null; reject(new Error('Google TTS: audio.play() falló')) }
+        ttsAudioEl.play().catch(reject)
       })
       ttsFailCount = 0
       return
@@ -183,7 +198,7 @@ function RespiracionCuadrada({ onBack }) {
           <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
             <p className="text-blue-700 text-sm">Inhala 4s · Retén 4s · Exhala 4s · Retén 4s · Repite 4 veces</p>
           </div>
-          <button onClick={start} className="w-full py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2"
+          <button onClick={() => { unlockAudio(); start() }} className="w-full py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2"
             style={{ background: 'linear-gradient(135deg, #1d4ed8, #0891b2)' }}>
             <Volume2 className="w-5 h-5" /> Iniciar con voz guiada
           </button>
@@ -288,7 +303,7 @@ function RespiracionDiafragmatica({ onBack }) {
             <p className="text-teal-600 text-sm">2. Respira de forma que solo suba la mano del abdomen</p>
             <p className="text-teal-600 text-sm">3. Inhala 4s, exhala 6s. Suave y continuo.</p>
           </div>
-          <button onClick={start} className="w-full py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2"
+          <button onClick={() => { unlockAudio(); start() }} className="w-full py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2"
             style={{ background: 'linear-gradient(135deg, #0d3d3d, #0f6b6b)' }}>
             <Volume2 className="w-5 h-5" /> Iniciar con voz guiada
           </button>
@@ -480,7 +495,7 @@ function MicroRelajacion({ onBack }) {
               </div>
             ))}
           </div>
-          <button onClick={start} className="w-full py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2"
+          <button onClick={() => { unlockAudio(); start() }} className="w-full py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2"
             style={{ background: 'linear-gradient(135deg, #be185d, #db2777)' }}>
             <Volume2 className="w-5 h-5" /> Iniciar con voz guiada
           </button>
@@ -572,7 +587,7 @@ function GroundingAula({ onBack }) {
               </div>
             ))}
           </div>
-          <button onClick={runGrounding} className="w-full py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2"
+          <button onClick={() => { unlockAudio(); runGrounding() }} className="w-full py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2"
             style={{ background: 'linear-gradient(135deg, #16a34a, #0d9488)' }}>
             <Volume2 className="w-5 h-5" /> Iniciar grounding guiado
           </button>
@@ -658,7 +673,7 @@ function SacudirTormenta({ onBack }) {
               <p key={i} className="text-amber-700 text-sm">• {item}</p>
             ))}
           </div>
-          <button onClick={start} className="w-full py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2"
+          <button onClick={() => { unlockAudio(); start() }} className="w-full py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2"
             style={{ background: 'linear-gradient(135deg, #b45309, #d97706)' }}>
             <Volume2 className="w-5 h-5" /> Iniciar (30s)
           </button>
@@ -736,7 +751,7 @@ function PosturaCalma({ onBack }) {
             ))}
           </div>
           <p className="text-slate-500 text-xs text-center">La postura vertical y abierta reduce la activación fisiológica y mejora la sensación de control.</p>
-          <button onClick={start} className="w-full py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2"
+          <button onClick={() => { unlockAudio(); start() }} className="w-full py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2"
             style={{ background: 'linear-gradient(135deg, #1d4ed8, #0891b2)' }}>
             <Volume2 className="w-5 h-5" /> Mantener postura 1 min
           </button>
@@ -841,7 +856,7 @@ function RitualCincoMinutos({ onBack }) {
               </div>
             ))}
           </div>
-          <button onClick={start} className="w-full py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2"
+          <button onClick={() => { unlockAudio(); start() }} className="w-full py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2"
             style={{ background: 'linear-gradient(135deg, #dc2626, #b45309)' }}>
             <Volume2 className="w-5 h-5" /> 🚨 Activar SOS 5 minutos
           </button>

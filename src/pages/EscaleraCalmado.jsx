@@ -9,8 +9,22 @@ import EvaluacionPrePost from '@/components/EvaluacionPrePost'
 const GOOGLE_TTS_KEY = import.meta.env.VITE_GOOGLE_TTS_KEY
 const audioCache = {}
 let activeAudio = null
+let ttsAudioEl = null
 let ttsFailCount = 0
 const TTS_FAIL_LIMIT = 2
+
+// Debe llamarse de forma SÍNCRONA dentro del onClick que inicia el ejercicio,
+// antes de cualquier await. Ver nota completa en RespiracionCuadrada.jsx.
+function unlockAudio() {
+  if (!ttsAudioEl) ttsAudioEl = new Audio()
+  ttsAudioEl.play().catch(() => {})
+  ttsAudioEl.pause()
+  if (window.speechSynthesis) {
+    const u = new SpeechSynthesisUtterance('')
+    u.volume = 0
+    window.speechSynthesis.speak(u)
+  }
+}
 
 function stopAudio() {
   if (activeAudio) { activeAudio.pause(); activeAudio.currentTime = 0; activeAudio = null }
@@ -69,12 +83,13 @@ async function speak(text, cancelRef) {
       }
       if (cancelRef?.current) return
       await new Promise((resolve, reject) => {
-        const audio = new Audio(audioCache[key])
-        audio.volume = 0.95
-        activeAudio = audio
-        audio.onended = () => { activeAudio = null; resolve() }
-        audio.onerror = () => { activeAudio = null; reject(new Error('Google TTS: audio.play() falló')) }
-        audio.play().catch(reject)
+        if (!ttsAudioEl) ttsAudioEl = new Audio()
+        ttsAudioEl.src = audioCache[key]
+        ttsAudioEl.volume = 0.95
+        activeAudio = ttsAudioEl
+        ttsAudioEl.onended = () => { activeAudio = null; resolve() }
+        ttsAudioEl.onerror = () => { activeAudio = null; reject(new Error('Google TTS: audio.play() falló')) }
+        ttsAudioEl.play().catch(reject)
       })
       ttsFailCount = 0
       return
@@ -262,7 +277,7 @@ export default function EscaleraCalmado() {
           />
         ) : (
           <div className="flex flex-col gap-3">
-            <button onClick={() => { handleStart(true); setEvalFase('ejercicio') }}
+            <button onClick={() => { unlockAudio(); handleStart(true); setEvalFase('ejercicio') }}
               className="w-full py-4 rounded-2xl text-white font-bold text-lg shadow-lg flex items-center justify-center gap-2"
               style={{ background: 'linear-gradient(135deg, #7c3aed, #0f6b6b)' }}>
               <Volume2 className="w-5 h-5" /> 🎙️ Iniciar con voz guiada
