@@ -275,6 +275,14 @@ export default function Layout({ children }) {
         <div className="p-4 lg:p-8">
           {children}
         </div>
+
+        <footer className="px-4 lg:px-8 pb-4 pt-2 text-center">
+          <p className="text-xs" style={{ color: 'rgba(15,23,42,0.35)' }}>
+            © 2026 Patricia Iso Vicente. Todos los derechos reservados.
+            <br className="lg:hidden" />
+            {' '}Propiedad intelectual registrada — Reg. Territorial de la Propiedad Intelectual de Aragón, nº 00765-03137144.
+          </p>
+        </footer>
       </main>
 
       {/* ── BOTTOM NAV MÓVIL ── */}
