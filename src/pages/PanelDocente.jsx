@@ -135,6 +135,7 @@ const EJERCICIOS = [
     pasos: ['Pon un temporizador en 5 minutos.', 'Cierra los ojos o baja la mirada al suelo.', 'Siente el peso de tu cuerpo en la silla. Los pies apoyados en el suelo.', 'Observa tu respiración sin cambiarla. Solo obsérvala.', 'Cuando llegue un pensamiento, nómbralo ("hay un pensamiento") y vuelve a la respiración.', 'Al sonar el temporizador, toma una respiración profunda y retoma el día.'],
     guiados: [
       { label: '🌬️ Respiración calmante guiada', ruta: '/respiracion', desc: 'Visual animada · exhala el doble que inhala' },
+      { label: '🧘 Mindfulness breve guiado', ruta: '/mindfulness', desc: 'App interactiva · voz, música, o ambas · 4 min' },
     ],
   },
   {

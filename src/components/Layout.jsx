@@ -151,7 +151,6 @@ export default function Layout({ children }) {
             <div className="px-4 pt-4 space-y-1">
               {[
                 { name: 'Panel Docente y PAS', sub: 'Recursos y herramientas', path: '/docentes', icon: null, isLogo: true },
-                { name: 'Mindfulness breve', sub: 'Presencia plena · 4 min', path: '/mindfulness', icon: Leaf, isLogo: false },
                 { name: 'Mi Perfil', sub: 'Tu cuenta', path: '/perfil', icon: User, isLogo: false },
                 ...(isAdmin ? [
                   { name: 'Panel Orientador', sub: 'Acceso con código', path: '/orientador', icon: Shield, isLogo: false },
