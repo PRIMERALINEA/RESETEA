@@ -107,37 +107,53 @@ export default function Relajacion() {
           <img src="https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/WhatsApp%20Image%202026-04-06%20at%2015.58.04.jpeg"
             alt="Resetea" className="w-10 h-10 rounded-full object-cover shadow-md flex-shrink-0" />
           <div>
-            <h1 className="text-xl font-black text-blue-900">Relajación muscular</h1>
-            <p className="text-slate-500 text-sm">Técnica de Jacobson progresiva</p>
+            <h1 className="text-xl font-black text-blue-900">Relajación</h1>
+            <p className="text-slate-500 text-sm">Elige una técnica para soltar tensión y calmar la mente</p>
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-blue-50 mb-6">
-          <p className="font-bold text-slate-800 mb-2">¿Cómo funciona?</p>
-          <p className="text-slate-600 text-sm leading-relaxed">Vas a tensar y soltar distintos grupos musculares. Al soltar, notarás una relajación profunda. Es ideal para antes de dormir o cuando sientes el cuerpo muy tenso por el estrés del estudio.</p>
-          <div className="mt-4 space-y-2">
-            {GROUPS.map((g, i) => (
-              <div key={g.id} className="flex items-center gap-3 text-sm text-slate-500">
-                <span>{g.emoji}</span>
-                <span>{g.name}</span>
-                <span className="text-xs text-slate-300 ml-auto">{g.tense + g.relax}s</span>
+        {/* Relajación muscular — Jacobson */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all border border-blue-50 mb-4">
+            <div className="flex items-center gap-4 mb-3">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center text-2xl flex-shrink-0">💪</div>
+              <div className="flex-1">
+                <p className="font-bold text-slate-800">Relajación muscular</p>
+                <p className="text-sm text-slate-500">Técnica de Jacobson progresiva</p>
+                <p className="text-xs text-blue-400 mt-1">~{Math.round(GROUPS.reduce((a, g) => a + g.tense + g.relax, 0) / 60)} min</p>
               </div>
-            ))}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={start}
+                className="flex-1 py-2 rounded-xl text-white text-sm font-bold bg-gradient-to-r from-rose-500 to-pink-600">
+                Sin voz
+              </button>
+              <button onClick={() => navigate('/relajacion/jacobson')}
+                className="flex-1 py-2 rounded-xl text-white text-sm font-bold flex items-center justify-center gap-1"
+                style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}>
+                <Mic className="w-3 h-3" /> Con voz
+              </button>
+            </div>
           </div>
-          <p className="text-xs text-slate-400 mt-4">Duración total: ~{Math.round(GROUPS.reduce((a, g) => a + g.tense + g.relax, 0) / 60)} minutos</p>
-        </div>
+        </motion.div>
 
-        <div className="flex flex-col gap-3">
-          <button onClick={start}
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-600 text-white font-bold text-lg shadow-lg hover:opacity-90 transition-opacity">
-            Comenzar sin voz
-          </button>
-          <button onClick={() => navigate('/relajacion/jacobson')}
-            className="w-full py-4 rounded-2xl text-white font-bold text-lg shadow-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-            style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}>
-            <Mic className="w-5 h-5" /> Con voz guiada
-          </button>
-        </div>
+        {/* Mindfulness breve */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+          <div className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all border border-emerald-50">
+            <div className="flex items-center gap-4 mb-3">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-700 flex items-center justify-center text-2xl flex-shrink-0">🌿</div>
+              <div className="flex-1">
+                <p className="font-bold text-slate-800">Mindfulness breve</p>
+                <p className="text-sm text-slate-500">Presencia plena · con voz, música, o ambas</p>
+                <p className="text-xs text-blue-400 mt-1">4 min</p>
+              </div>
+            </div>
+            <button onClick={() => navigate('/mindfulness')}
+              className="w-full py-2 rounded-xl text-white text-sm font-bold bg-gradient-to-r from-emerald-500 to-green-700">
+              Empezar
+            </button>
+          </div>
+        </motion.div>
       </div>
     )
   }
