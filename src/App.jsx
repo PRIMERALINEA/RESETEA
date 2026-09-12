@@ -10,6 +10,7 @@ import Relajacion from '@/pages/Relajacion'
 import TestEstres from '@/pages/TestEstres'
 import RespiracionCuadrada from '@/pages/RespiracionCuadrada'
 import RelajacionJacobson from '@/pages/RelajacionJacobson'
+import Mindfulness from '@/pages/Mindfulness'
 import TecnicasRapidas from '@/pages/TecnicasRapidas'
 import KitEmergencia from '@/pages/KitEmergencia'
 import Rutinas from '@/pages/Rutinas'
@@ -107,6 +108,7 @@ export default function App() {
         <Route path="/grounding"         element={<ProtectedRoute><Layout><Grounding54321 /></Layout></ProtectedRoute>} />
         <Route path="/respiracion/cuadrada" element={<P><RespiracionCuadrada /></P>} />
         <Route path="/relajacion/jacobson"  element={<P><RelajacionJacobson /></P>} />
+        <Route path="/mindfulness"          element={<P><Mindfulness /></P>} />
         <Route path="/perfil" element={<ProtectedRoute><Layout><MiPerfil /></Layout></ProtectedRoute>} />
         <Route path="/admin"  element={<ProtectedRoute><Layout><AdminDashboard /></Layout></ProtectedRoute>} />
 

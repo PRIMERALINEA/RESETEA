@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/AuthContext'
-import { Wind, Anchor, BookOpen, Heart, Brain, Home, LogOut, Menu, X, ChevronDown, ChevronRight, Zap, AlertCircle, Sun, User, BarChart2, Shield } from 'lucide-react'
+import { Wind, Anchor, BookOpen, Heart, Brain, Home, LogOut, Menu, X, ChevronDown, ChevronRight, Zap, AlertCircle, Sun, User, BarChart2, Shield, Leaf } from 'lucide-react'
 
 const LOGO_URL = 'https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/WhatsApp%20Image%202026-04-06%20at%2015.58.04.jpeg'
 
@@ -39,6 +39,7 @@ const navGroups = [
     color: 'text-rose-400',
     items: [
       { name: 'Relajación Muscular', sub: 'Técnica de Jacobson', path: '/relajacion', icon: Heart },
+      { name: 'Mindfulness breve', sub: 'Presencia plena · 4 min', path: '/mindfulness', icon: Leaf },
     ]
   },
   {
@@ -150,6 +151,7 @@ export default function Layout({ children }) {
             <div className="px-4 pt-4 space-y-1">
               {[
                 { name: 'Panel Docente y PAS', sub: 'Recursos y herramientas', path: '/docentes', icon: null, isLogo: true },
+                { name: 'Mindfulness breve', sub: 'Presencia plena · 4 min', path: '/mindfulness', icon: Leaf, isLogo: false },
                 { name: 'Mi Perfil', sub: 'Tu cuenta', path: '/perfil', icon: User, isLogo: false },
                 ...(isAdmin ? [
                   { name: 'Panel Orientador', sub: 'Acceso con código', path: '/orientador', icon: Shield, isLogo: false },
