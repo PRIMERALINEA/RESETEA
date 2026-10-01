@@ -16,6 +16,18 @@ const CURSOS = [
   '1º FP Superior', '2º FP Superior',
 ]
 
+const CURSOS_BACHILLERATO = ['1º Bachillerato', '2º Bachillerato']
+const CURSOS_ESO = ['1º ESO', '2º ESO', '3º ESO', '4º ESO']
+const GRUPOS_BACHILLERATO = ['C', 'H', 'T']
+const GRUPOS_ESO = ['E1', 'E2', 'E3', 'E4', 'EP', 'ED']
+
+// Devuelve las opciones del desplegable de grupo según el curso, o null si no aplica
+function opcionesGrupo(curso) {
+  if (CURSOS_BACHILLERATO.includes(curso)) return GRUPOS_BACHILLERATO
+  if (CURSOS_ESO.includes(curso)) return GRUPOS_ESO
+  return null
+}
+
 const POLITICA_TEXTO = `
 POLÍTICA DE PROTECCIÓN DE DATOS — RESETEA
 
@@ -53,6 +65,7 @@ export default function Login() {
   const [password, setPassword]               = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [curso, setCurso]                     = useState('')
+  const [grupo, setGrupo]                     = useState('')
   const [rol, setRol]                         = useState('alumno') // 'alumno' | 'docente'
   const [isRegister, setIsRegister]           = useState(false)
   const [loading, setLoading]                 = useState(false)
@@ -95,6 +108,9 @@ export default function Login() {
       if (rol === 'alumno' && !curso) {
         setError('Por favor selecciona tu curso'); setLoading(false); return
       }
+      if (rol === 'alumno' && opcionesGrupo(curso) && !grupo) {
+        setError('Por favor selecciona tu grupo'); setLoading(false); return
+      }
       if (!aceptaPolitica) {
         setError('Debes aceptar la política de protección de datos para registrarte'); setLoading(false); return
       }
@@ -116,6 +132,7 @@ export default function Login() {
             await supabase.from('perfiles_alumnos').upsert({
               user_id: data.user.id,
               curso,
+              grupo: opcionesGrupo(curso) ? grupo : null,
               rol: 'alumno',
               centro_id: centroCheck.id,
               acepta_politica: true,
@@ -134,7 +151,7 @@ export default function Login() {
 
         setSuccess('¡Cuenta creada! Revisa tu email para confirmar tu cuenta y después entra.')
         setIsRegister(false)
-        setPassword(''); setConfirmPassword(''); setCurso(''); setAceptaPolitica(false)
+        setPassword(''); setConfirmPassword(''); setCurso(''); setGrupo(''); setAceptaPolitica(false)
 
       } else {
         // LOGIN — detectar rol para redirigir
@@ -170,8 +187,10 @@ export default function Login() {
     }
   }
 
+  const grupoOpciones = opcionesGrupo(curso)
   const canSubmit = email && password &&
-    (!isRegister || (aceptaPolitica && confirmPassword && (rol === 'docente' || curso)))
+    (!isRegister || (aceptaPolitica && confirmPassword &&
+      (rol === 'docente' || (curso && (!grupoOpciones || grupo)))))
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4"
@@ -209,7 +228,7 @@ export default function Login() {
                   <button
                     key={opcion.valor}
                     type="button"
-                    onClick={() => { setRol(opcion.valor); setCurso('') }}
+                    onClick={() => { setRol(opcion.valor); setCurso(''); setGrupo('') }}
                     className="flex flex-col items-center gap-1.5 py-3 rounded-2xl border-2 font-bold text-sm transition-all"
                     style={{
                       background: rol === opcion.valor ? 'linear-gradient(135deg, #0d3d3d, #0f6b6b)' : 'white',
@@ -242,12 +261,30 @@ export default function Login() {
               <label className="block text-sm font-medium text-slate-600 mb-1">Tu curso</label>
               <div className="relative">
                 <select
-                  value={curso} onChange={e => setCurso(e.target.value)}
+                  value={curso} onChange={e => { setCurso(e.target.value); setGrupo('') }}
                   className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 appearance-none bg-white pr-10"
                   style={{ color: curso ? '#1e293b' : '#94a3b8' }}
                 >
                   <option value="" disabled>Selecciona tu curso</option>
                   {CURSOS.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
+              </div>
+            </div>
+          )}
+
+          {/* Grupo — solo alumnos en registro, cuando el curso es Bachillerato o ESO */}
+          {isRegister && rol === 'alumno' && grupoOpciones && (
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-1">Tu grupo</label>
+              <div className="relative">
+                <select
+                  value={grupo} onChange={e => setGrupo(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 appearance-none bg-white pr-10"
+                  style={{ color: grupo ? '#1e293b' : '#94a3b8' }}
+                >
+                  <option value="" disabled>Selecciona tu grupo</option>
+                  {grupoOpciones.map(g => <option key={g} value={g}>{g}</option>)}
                 </select>
                 <ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
               </div>
@@ -303,7 +340,7 @@ export default function Login() {
 
           <button onClick={() => {
             setIsRegister(!isRegister); setError(''); setSuccess('')
-            setCurso(''); setAceptaPolitica(false); setConfirmPassword(''); setRol('alumno')
+            setCurso(''); setGrupo(''); setAceptaPolitica(false); setConfirmPassword(''); setRol('alumno')
           }} className="w-full text-sm text-teal-600 hover:text-teal-800 transition-colors pt-1">
             {isRegister ? '¿Ya tienes cuenta? Entra aquí' : '¿Primera vez? Crea tu cuenta'}
           </button>
