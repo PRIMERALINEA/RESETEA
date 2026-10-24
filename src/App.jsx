@@ -83,7 +83,7 @@ export default function App() {
         {/* -- Publica -- */}
         <Route path="/login" element={<Login />} />
         <Route path="/privacidad" element={<PoliticaPrivacidad />} />
-        <Route path="/orientador" element={<PanelOrientador />} />
+        <Route path="/orientador" element={<DocenteRoute><PanelOrientador /></DocenteRoute>} />
         <Route path="/acceso-individual" element={<AccesoIndividual />} />
         <Route path="/registro-individual" element={<RegistroIndividual />} />
         <Route path="/pago-exitoso" element={<PagoExitoso />} />

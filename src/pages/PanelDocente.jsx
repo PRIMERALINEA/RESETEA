@@ -446,7 +446,7 @@ export default function PanelDocente() {
           Docentes, orientadores, administrativos, auxiliares... Este espacio es para cuidaros a vosotros.
         </p>
         <button
-          onClick={() => setModalOrientador(true)}
+          onClick={() => navigate('/orientador')}
           className="mt-4 w-full py-2.5 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:opacity-90"
           style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}>
           <Lock className="w-4 h-4" /> Panel Orientador

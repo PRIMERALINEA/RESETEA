@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import OrientadorAcceso from '@/components/OrientadorAcceso'
 import { supabase } from '@/api/supabaseClient'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -31,65 +32,6 @@ const K_UMBRAL = 5
 const maskVal = (v) => (v == null || v < K_UMBRAL) ? `<${K_UMBRAL}` : v
 const isMasked = (v) => (v == null || v < K_UMBRAL)
 
-// ── LOGIN ─────────────────────────────────────────────────────
-function LoginOrientador({ onAcceso }) {
-  const [codigo, setCodigo] = useState('')
-  const [error, setError]   = useState('')
-  const [loading, setLoading] = useState(false)
-  const [show, setShow]     = useState(false)
-
-  const verificar = async () => {
-    if (!codigo.trim()) return
-    setLoading(true); setError('')
-    try {
-      const { data, error } = await supabase
-        .rpc('validar_codigo_orientador', { p_codigo: codigo.trim().toUpperCase() })
-        .maybeSingle()
-      if (error || !data) setError('Código incorrecto. Contacta con el administrador.')
-      else onAcceso(data)
-    } catch { setError('Error de conexión. Inténtalo de nuevo.') }
-    finally { setLoading(false) }
-  }
-
-  return (
-    <div className="min-h-screen flex items-center justify-center p-4"
-      style={{ background: 'linear-gradient(135deg, #0d3d3d 0%, #1d4ed8 100%)' }}>
-      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-            style={{ background: 'rgba(255,255,255,0.15)' }}>
-            <Shield className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-2xl font-black text-white">Panel Orientador</h1>
-          <p className="text-blue-200 text-sm mt-1">Resetea · Acceso profesional</p>
-        </div>
-        <div className="bg-white rounded-3xl shadow-2xl p-6 space-y-4">
-          <p className="font-bold text-slate-700">Introduce tu código de acceso</p>
-          {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">{error}</div>}
-          <div className="relative">
-            <input type={show ? 'text' : 'password'} value={codigo}
-              onChange={e => setCodigo(e.target.value.toUpperCase())}
-              onKeyDown={e => e.key === 'Enter' && verificar()}
-              placeholder="CÓDIGO DE ACCESO"
-              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-mono tracking-widest focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 pr-12" />
-            <button onClick={() => setShow(!show)} className="absolute right-3 top-3 text-slate-400">
-              {show ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-            </button>
-          </div>
-          <button onClick={verificar} disabled={loading || !codigo}
-            className="w-full py-3 rounded-xl text-white font-bold disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, #0d3d3d, #1d4ed8)' }}>
-            {loading ? 'Verificando...' : 'Acceder al panel'}
-          </button>
-          <p className="text-xs text-slate-400 text-center">¿No tienes código? Contacta con el administrador del centro.</p>
-          <p className="text-xs text-slate-300 text-center pt-2 border-t border-slate-100">© 2026 Patricia Iso · Todos los derechos reservados</p>
-        </div>
-      </motion.div>
-    </div>
-  )
-}
-
-// ── KPI CARD ──────────────────────────────────────────────────
 function KpiCard({ icon: Icon, label, value, sub, color, delay = 0 }) {
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}
@@ -182,18 +124,19 @@ function Dashboard({ orientador, onSalir }) {
       const hace7  = new Date(Date.now() - 7  * 86400000).toISOString()
       const hace30 = new Date(Date.now() - 30 * 86400000).toISOString()
 
-      const { data: perfiles } = await supabase
-        .from('perfiles_docentes').select('user_id, created_at')
-        .eq('centro_id', orientador.centro_id)
+      const { data: perfilesRaw, error: errPerf } = await supabase.rpc('panel_docentes_centro')
+      if (errPerf) throw errPerf
+      const perfiles = perfilesRaw || []
 
-      if (!perfiles || perfiles.length === 0) { setDocentes([]); return }
+      if (perfiles.length === 0) { setDocentes([]); return }
 
       const ids = perfiles.map(p => p.user_id)
-      const [sResp, sRelaj, sAnclaje] = await Promise.all([
-        supabase.from('sesiones_respiracion').select('user_id, created_at').in('user_id', ids),
-        supabase.from('sesiones_relajacion').select('user_id, created_at').in('user_id', ids),
-        supabase.from('sesiones_anclaje').select('user_id, created_at').in('user_id', ids),
-      ])
+      const { data: filas, error: errSes } = await supabase.rpc('panel_sesiones', { p_ids: ids })
+      if (errSes) throw errSes
+      const sesAll = filas || []
+      const sResp    = { data: sesAll.filter(s => s.tipo === 'respiracion') }
+      const sRelaj   = { data: sesAll.filter(s => s.tipo === 'relajacion') }
+      const sAnclaje = { data: sesAll.filter(s => s.tipo === 'anclaje') }
 
       const todas = [
         ...(sResp.data   || []).map(s => ({ ...s, tipo: 'respiracion' })),
@@ -228,26 +171,23 @@ function Dashboard({ orientador, onSalir }) {
   const cargarGrupos = async () => {
     setLoadingGrupos(true)
     try {
-      const centroId = orientador.centro_id
-
-      // 1. Obtener todos los perfiles de alumnos del centro (o individuales si no hay centro)
-      let query = supabase.from('perfiles_alumnos').select('user_id, curso, created_at')
-      if (centroId) query = query.eq('centro_id', centroId)
-      else query = query.is('centro_id', null)
-      const { data: perfiles, error: perfilesError } = await query
+      // 1. Alumnos del centro (el servidor solo devuelve los de TU centro)
+      const { data: perfilesRaw, error: perfilesError } = await supabase.rpc('panel_alumnos_centro')
       if (perfilesError) throw perfilesError
-      if (!perfiles || perfiles.length === 0) { setGrupos([]); return }
+      const perfiles = perfilesRaw || []
+      if (perfiles.length === 0) { setGrupos([]); return }
 
       const ids = perfiles.map(p => p.user_id)
       const hace7 = new Date(Date.now() - 7 * 86400000).toISOString()
 
-      // 2. Cargar sesiones y tests en paralelo
-      const [sResp, sRelaj, sAnclaje, sTest] = await Promise.all([
-        supabase.from('sesiones_respiracion').select('user_id, created_at').in('user_id', ids),
-        supabase.from('sesiones_relajacion').select('user_id, created_at').in('user_id', ids),
-        supabase.from('sesiones_anclaje').select('user_id, created_at').in('user_id', ids),
-        supabase.from('test_estres').select('user_id, puntuacion, created_at').in('user_id', ids),
-      ])
+      // 2. Sesiones y tests
+      const { data: filas, error: errSes } = await supabase.rpc('panel_sesiones', { p_ids: ids })
+      if (errSes) throw errSes
+      const sesAll = filas || []
+      const sResp    = { data: sesAll.filter(s => s.tipo === 'respiracion') }
+      const sRelaj   = { data: sesAll.filter(s => s.tipo === 'relajacion') }
+      const sAnclaje = { data: sesAll.filter(s => s.tipo === 'anclaje') }
+      const sTest    = { data: sesAll.filter(s => s.tipo === 'test') }
 
       const sesResp   = sResp.data   || []
       const sesRelaj  = sRelaj.data  || []
@@ -902,11 +842,9 @@ function Dashboard({ orientador, onSalir }) {
 
 // ── RAÍZ ─────────────────────────────────────────────────────
 export default function PanelOrientador() {
-  const location = useLocation()
-  const [orientador, setOrientador] = useState(
-    location.state?.orientador ?? null
-  )
+  const navigate = useNavigate()
+  const [orientador, setOrientador] = useState(null)
   return orientador
-    ? <Dashboard orientador={orientador} onSalir={() => setOrientador(null)} />
-    : <LoginOrientador onAcceso={setOrientador} />
+    ? <Dashboard orientador={orientador} onSalir={() => navigate('/docentes')} />
+    : <OrientadorAcceso onAcceso={setOrientador} />
 }
