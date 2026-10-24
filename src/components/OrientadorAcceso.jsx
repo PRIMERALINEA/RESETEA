@@ -10,6 +10,25 @@ import { supabase, logError } from '@/api/supabaseClient'
 
 const inputCls = 'w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-center tracking-widest text-lg focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100'
 
+// Marco de la pantalla. Va FUERA del componente principal: si se define dentro, React lo vuelve a crear
+// en cada pulsacion de tecla y el campo del codigo pierde el cursor.
+function Marco({ children }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: 'linear-gradient(135deg, #0d3d3d 0%, #1d4ed8 100%)' }}>
+      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: 'rgba(255,255,255,0.15)' }}>
+            <Shield className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-black text-white">Panel Orientador</h1>
+        </div>
+        <div className="bg-white rounded-3xl p-6 shadow-xl space-y-4">{children}</div>
+      </motion.div>
+    </div>
+  )
+}
+
 export default function OrientadorAcceso({ onAcceso }) {
   const navigate = useNavigate()
   const [fase, setFase] = useState('cargando') // cargando | sin_acceso | enrolar | verificar
@@ -77,21 +96,6 @@ export default function OrientadorAcceso({ onAcceso }) {
       setTrabajando(false)
     }
   }
-
-  const Marco = ({ children }) => (
-    <div className="min-h-screen flex items-center justify-center p-4"
-      style={{ background: 'linear-gradient(135deg, #0d3d3d 0%, #1d4ed8 100%)' }}>
-      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: 'rgba(255,255,255,0.15)' }}>
-            <Shield className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-2xl font-black text-white">Panel Orientador</h1>
-        </div>
-        <div className="bg-white rounded-3xl p-6 shadow-xl space-y-4">{children}</div>
-      </motion.div>
-    </div>
-  )
 
   if (fase === 'cargando') return (
     <Marco><div className="flex justify-center py-6"><div className="w-8 h-8 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin" /></div></Marco>
