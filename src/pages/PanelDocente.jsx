@@ -283,10 +283,7 @@ export default function PanelDocente() {
     if (!claveInput.trim()) return
     try {
       const { data, error } = await supabase
-        .from('orientadores')
-        .select('*')
-        .eq('codigo', claveInput.trim().toUpperCase())
-        .eq('activo', true)
+        .rpc('validar_codigo_orientador', { p_codigo: claveInput.trim().toUpperCase() })
         .maybeSingle()
       if (error || !data) {
         setClaveError(true)

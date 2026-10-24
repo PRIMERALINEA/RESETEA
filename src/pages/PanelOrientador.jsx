@@ -43,10 +43,7 @@ function LoginOrientador({ onAcceso }) {
     setLoading(true); setError('')
     try {
       const { data, error } = await supabase
-        .from('orientadores')
-        .select('*')
-        .eq('codigo', codigo.trim().toUpperCase())
-        .eq('activo', true)
+        .rpc('validar_codigo_orientador', { p_codigo: codigo.trim().toUpperCase() })
         .maybeSingle()
       if (error || !data) setError('Código incorrecto. Contacta con el administrador.')
       else onAcceso(data)
