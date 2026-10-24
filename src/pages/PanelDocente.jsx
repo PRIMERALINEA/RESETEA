@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/api/supabaseClient'
+import ConvivenciaReceptorCard from '@/components/ConvivenciaReceptorCard'
 import { Brain, Heart, Flame, ChevronDown, ChevronUp, Play, CheckCircle, AlertTriangle, BarChart2, Sparkles, Mic, MicOff, BookOpen, History, Trash2, Square, Lock, Eye, EyeOff } from 'lucide-react'
 
 const LOGO_URL = 'https://zbusdixrxedfhbkquafh.supabase.co/storage/v1/object/public/logo/WhatsApp%20Image%202026-04-06%20at%2015.58.04.jpeg'
@@ -378,6 +379,9 @@ export default function PanelDocente() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
+
+      {/* Avisos de convivencia: solo visible para receptores dados de alta */}
+      <ConvivenciaReceptorCard />
 
       {/* ── Modal clave orientador ── */}
       {modalOrientador && (

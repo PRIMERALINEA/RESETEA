@@ -28,6 +28,7 @@ import ModuloFamilias from '@/pages/ModuloFamilias'
 import AccesoIndividual from '@/pages/AccesoIndividual'
 import RegistroIndividual from '@/pages/RegistroIndividual'
 import PagoExitoso from '@/pages/PagoExitoso'
+import Convivencia from '@/pages/Convivencia'
 import Layout from '@/components/Layout'
 import { RgpdBanner, useRgpdConsent, PoliticaPrivacidad } from '@/components/RgpdBanner'
 
@@ -114,6 +115,7 @@ export default function App() {
 
         {/* -- Rutas de DOCENTE (solo docente) -- */}
         <Route path="/docentes" element={<DL><PanelDocente /></DL>} />
+        <Route path="/convivencia" element={<DL><Convivencia /></DL>} />
 
         {/* -- Fallback -- */}
         <Route path="*" element={<Navigate to="/" replace />} />

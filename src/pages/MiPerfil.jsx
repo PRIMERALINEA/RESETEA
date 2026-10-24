@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/api/supabaseClient'
+import ReporteConvivencia from '@/components/ReporteConvivencia'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   User, Wind, Anchor, Heart, BookOpen, Brain, Zap, TrendingUp, TrendingDown, Minus,
@@ -653,6 +654,10 @@ Los datos son personales y confidenciales.`
           </button>
         </motion.div>
       )}
+
+      {/* Convivencia: aviso de acoso escolar (solo cuentas de alumnado) */}
+      {subscriptionStatus && <ReporteConvivencia centroId={subscriptionStatus.centro_id} />}
+
       <div className="flex gap-2 mb-6">
         {PERIODOS.map((p, i) => (
           <button key={i} onClick={() => { setPeriodoIdx(i); setShowAll(false) }}
