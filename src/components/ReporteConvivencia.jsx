@@ -69,6 +69,7 @@ export default function ReporteConvivencia({ centroId }) {
     setError('')
     if (!form.tipo) { setError('Indica si te ocurre a ti o has sido testigo.'); return }
     if (sanitize(form.descripcion).length < 10) { setError('Cuéntanos qué ha pasado con algo más de detalle (mínimo 10 caracteres).'); return }
+    if (sanitize(form.lugar).length < 2) { setError('Indica dónde ocurre (por ejemplo: patio, clase, pasillo, redes sociales).'); return }
     setEnviando(true)
     try {
       // El servidor fija quién eres, tu curso y tu centro: aquí solo se envía el contenido.
@@ -192,7 +193,7 @@ export default function ReporteConvivencia({ centroId }) {
 
                   <div className="grid grid-cols-1 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-slate-600 mb-1">¿Dónde ocurre? (opcional)</label>
+                      <label className="block text-sm font-medium text-slate-600 mb-1">¿Dónde ocurre? *</label>
                       <input value={form.lugar} onChange={e => set('lugar', e.target.value)} maxLength={300}
                         placeholder="Patio, clase, pasillo, redes sociales…"
                         className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100" />
