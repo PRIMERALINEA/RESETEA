@@ -60,10 +60,10 @@ function Dashboard({ orientador, onSalir }) {
   const [ansiedad, setAnsiedad]       = useState([])
   const [quincenal, setQuincenal]     = useState(null)
   const [sesionStats, setSesionStats] = useState(null)
-  const [usuariosActivos, setUsuariosActivos] = useState([])
+  const [activos7, setActivos7] = useState(null)   // solo un número (o null si hay menos de 5)
 
   // Datos docentes
-  const [docentes, setDocentes]       = useState([])
+  const [docResumen, setDocResumen]   = useState(null)   // solo totales, nunca filas por docente
   const [loadingDocentes, setLoadingDocentes] = useState(false)
 
   // Datos grupos
@@ -80,7 +80,7 @@ function Dashboard({ orientador, onSalir }) {
         supabase.rpc('get_resetea_ansiedad_stats',       { p_centro_id: centroId }),
         supabase.rpc('get_resetea_eval_quincenal_stats', { p_centro_id: centroId }),
         supabase.rpc('get_resetea_eval_sesion_stats',    { p_centro_id: centroId }),
-        supabase.rpc('get_resetea_usuarios_activos',     { p_centro_id: centroId }),
+        supabase.rpc('panel_usuarios_activos'),
       ])
 
       // Dashboard — devuelve objeto JSON directamente
@@ -111,8 +111,8 @@ function Dashboard({ orientador, onSalir }) {
         } catch { setSesionStats(null) }
       }
 
-      // Usuarios activos — devuelve array de objetos
-      if (r6.data) setUsuariosActivos(Array.isArray(r6.data) ? r6.data : [])
+      // Usuarios activos (7 días) — solo el total; null si hay menos de 5
+      setActivos7(r6.data?.activos7 ?? null)
 
       setLastUpdate(new Date())
     } catch (e) { console.error('Error cargando datos orientador:', e) }
@@ -122,149 +122,33 @@ function Dashboard({ orientador, onSalir }) {
   const cargarDocentes = async () => {
     setLoadingDocentes(true)
     try {
-      const hace7  = new Date(Date.now() - 7  * 86400000).toISOString()
-      const hace30 = new Date(Date.now() - 30 * 86400000).toISOString()
-
-      const { data: perfilesRaw, error: errPerf } = await supabase.rpc('panel_docentes_centro')
-      if (errPerf) throw errPerf
-      const perfiles = perfilesRaw || []
-
-      if (perfiles.length === 0) { setDocentes([]); return }
-
-      const ids = perfiles.map(p => p.user_id)
-      const { data: filas, error: errSes } = await supabase.rpc('panel_sesiones', { p_ids: ids })
-      if (errSes) throw errSes
-      const sesAll = filas || []
-      const sResp    = { data: sesAll.filter(s => s.tipo === 'respiracion') }
-      const sRelaj   = { data: sesAll.filter(s => s.tipo === 'relajacion') }
-      const sAnclaje = { data: sesAll.filter(s => s.tipo === 'anclaje') }
-
-      const todas = [
-        ...(sResp.data   || []).map(s => ({ ...s, tipo: 'respiracion' })),
-        ...(sRelaj.data  || []).map(s => ({ ...s, tipo: 'relajacion' })),
-        ...(sAnclaje.data || []).map(s => ({ ...s, tipo: 'anclaje' })),
-      ]
-
-      setDocentes(perfiles.map(p => {
-        const ses = todas.filter(s => s.user_id === p.user_id)
-        const ultima = ses.length > 0
-          ? ses.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0].created_at
-          : null
-        const dias = ultima ? Math.floor((Date.now() - new Date(ultima)) / 86400000) : null
-        return {
-          hash: p.user_id.slice(0, 8),
-          registrado: p.created_at,
-          total: ses.length,
-          activo7:  ses.some(s => s.created_at >= hace7),
-          activo30: ses.some(s => s.created_at >= hace30),
-          dias,
-          porTipo: {
-            respiracion: ses.filter(s => s.tipo === 'respiracion').length,
-            relajacion:  ses.filter(s => s.tipo === 'relajacion').length,
-            anclaje:     ses.filter(s => s.tipo === 'anclaje').length,
-          }
-        }
-      }))
-    } catch (e) { console.error(e) }
+      const { data, error } = await supabase.rpc('panel_docentes_resumen')
+      if (error) throw error
+      setDocResumen(data || null)
+    } catch (e) { console.error(e); setDocResumen(null) }
     finally { setLoadingDocentes(false) }
   }
 
+  const ORDEN_CURSOS = [
+    '1º Primaria','2º Primaria','3º Primaria','4º Primaria','5º Primaria','6º Primaria',
+    '1º ESO','2º ESO','3º ESO','4º ESO',
+    '1º Bachillerato','2º Bachillerato',
+    'FP Básica','1º FP Medio','2º FP Medio','1º FP Superior','2º FP Superior','Sin curso','Otros cursos'
+  ]
+
+  // El servidor devuelve ya una fila por curso (mínimo 5 alumnos por curso) y con
+  // las cifras pequeñas vacías. Aquí solo se ordena.
   const cargarGrupos = async () => {
     setLoadingGrupos(true)
     try {
-      // 1. Alumnos del centro (el servidor solo devuelve los de TU centro)
-      const { data: perfilesRaw, error: perfilesError } = await supabase.rpc('panel_alumnos_centro')
-      if (perfilesError) throw perfilesError
-      const perfiles = perfilesRaw || []
-      if (perfiles.length === 0) { setGrupos([]); return }
-
-      const ids = perfiles.map(p => p.user_id)
-      const hace7 = new Date(Date.now() - 7 * 86400000).toISOString()
-
-      // 2. Sesiones y tests
-      const { data: filas, error: errSes } = await supabase.rpc('panel_sesiones', { p_ids: ids })
-      if (errSes) throw errSes
-      const sesAll = filas || []
-      const sResp    = { data: sesAll.filter(s => s.tipo === 'respiracion') }
-      const sRelaj   = { data: sesAll.filter(s => s.tipo === 'relajacion') }
-      const sAnclaje = { data: sesAll.filter(s => s.tipo === 'anclaje') }
-      const sTest    = { data: sesAll.filter(s => s.tipo === 'test') }
-
-      const sesResp   = sResp.data   || []
-      const sesRelaj  = sRelaj.data  || []
-      const sesAnclaje = sAnclaje.data || []
-      const tests     = sTest.data   || []
-
-      // 3. Agrupar por curso
-      const porCurso = {}
-      perfiles.forEach(p => {
-        const curso = p.curso || 'Sin curso'
-        if (!porCurso[curso]) porCurso[curso] = []
-        porCurso[curso].push(p.user_id)
+      const { data, error } = await supabase.rpc('panel_grupos')
+      if (error) throw error
+      const lista = Array.isArray(data) ? data : []
+      lista.sort((a, b) => {
+        const ia = ORDEN_CURSOS.indexOf(a.curso), ib = ORDEN_CURSOS.indexOf(b.curso)
+        return (ia === -1 ? 98 : ia) - (ib === -1 ? 98 : ib)
       })
-
-      // 4. Calcular métricas por curso
-      const ORDEN_CURSOS = [
-        '1º Primaria','2º Primaria','3º Primaria','4º Primaria','5º Primaria','6º Primaria',
-        '1º ESO','2º ESO','3º ESO','4º ESO',
-        '1º Bachillerato','2º Bachillerato',
-        'FP Básica','1º FP Medio','2º FP Medio','1º FP Superior','2º FP Superior','Sin curso'
-      ]
-
-      const grupos = Object.entries(porCurso)
-        .sort(([a], [b]) => {
-          const ia = ORDEN_CURSOS.indexOf(a)
-          const ib = ORDEN_CURSOS.indexOf(b)
-          return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib)
-        })
-        .map(([curso, userIds]) => {
-          const respCurso   = sesResp.filter(s => userIds.includes(s.user_id))
-          const relajCurso  = sesRelaj.filter(s => userIds.includes(s.user_id))
-          const anclajeCurso = sesAnclaje.filter(s => userIds.includes(s.user_id))
-          const testsCurso  = tests.filter(t => userIds.includes(t.user_id))
-
-          // Última sesión de respiración
-          const ultimaResp = respCurso.length > 0
-            ? respCurso.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0].created_at
-            : null
-          const ultimaRelaj = relajCurso.length > 0
-            ? relajCurso.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0].created_at
-            : null
-
-          // Ansiedad: tomar el test más reciente por usuario
-          const ultimoTestPorUser = {}
-          testsCurso.forEach(t => {
-            if (!ultimoTestPorUser[t.user_id] || t.created_at > ultimoTestPorUser[t.user_id].created_at)
-              ultimoTestPorUser[t.user_id] = t
-          })
-          const puntsCurso = Object.values(ultimoTestPorUser).map(t => t.puntuacion).filter(p => p != null)
-          const ansiedad_media = puntsCurso.length > 0
-            ? Math.round((puntsCurso.reduce((a, b) => a + b, 0) / puntsCurso.length) * 10) / 10
-            : null
-          const ansiedad_minima   = puntsCurso.filter(p => p <= 4).length
-          const ansiedad_leve     = puntsCurso.filter(p => p >= 5 && p <= 9).length
-          const ansiedad_moderada = puntsCurso.filter(p => p >= 10 && p <= 14).length
-          const ansiedad_severa   = puntsCurso.filter(p => p >= 15).length
-
-          return {
-            curso,
-            total_alumnos: userIds.length,
-            alumnos_con_test: puntsCurso.length,
-            sesiones_respiracion: respCurso.length,
-            sesiones_relajacion:  relajCurso.length,
-            sesiones_anclaje:     anclajeCurso.length,
-            respiracion_semana: respCurso.filter(s => s.created_at >= hace7).length,
-            ultima_sesion_respiracion: ultimaResp,
-            ultima_sesion_relajacion:  ultimaRelaj,
-            ansiedad_media,
-            ansiedad_minima,
-            ansiedad_leve,
-            ansiedad_moderada,
-            ansiedad_severa,
-          }
-        })
-
-      setGrupos(grupos)
+      setGrupos(lista)
     } catch (e) { console.error(e); setGrupos([]) }
     finally { setLoadingGrupos(false) }
   }
@@ -294,12 +178,6 @@ function Dashboard({ orientador, onSalir }) {
   ]
 
   const maxTipo = Math.max(...porTipo.map(h => h.count ?? h.total ?? 0), 1)
-
-  // Métricas docentes
-  const docentesActivos7  = docentes.filter(d => d.activo7).length
-  const docentesActivos30 = docentes.filter(d => d.activo30).length
-  const totalSesDoc = docentes.reduce((a, d) => a + d.total, 0)
-  const sinActiv14  = docentes.filter(d => d.dias === null || d.dias > 14).length
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-4">
@@ -369,7 +247,7 @@ function Dashboard({ orientador, onSalir }) {
                 <KpiCard icon={Users}      label="Usuarios registrados"  value={dashboard?.total_usuarios}          color="#0f6b6b" delay={0.05} />
                 <KpiCard icon={Activity}   label="Actividades totales"    value={dashboard?.total_actividades}       color="#7c3aed" delay={0.1} />
                 <KpiCard icon={Calendar}   label="Actividades hoy"        value={dashboard?.actividades_hoy}         color="#0891b2" delay={0.15} />
-                <KpiCard icon={TrendingUp} label="Usuarios activos (7d)"  value={usuariosActivos.length}             color="#b45309" delay={0.2} sub="Últimos 7 días" />
+                <KpiCard icon={TrendingUp} label="Usuarios activos (7d)"  value={activos7 == null ? `<${K_UMBRAL}` : activos7} color="#b45309" delay={0.2} sub="Últimos 7 días" />
               </div>
 
               {/* Métricas adicionales del dashboard */}
@@ -387,23 +265,7 @@ function Dashboard({ orientador, onSalir }) {
                 </div>
               )}
 
-              {/* Usuarios activos recientes */}
-              {usuariosActivos.length > 0 && (
-                <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-                  <p className="font-black text-slate-800 mb-3">Usuarios activos recientes</p>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {usuariosActivos.slice(0, 10).map((u, i) => (
-                      <div key={i} className="flex items-center justify-between text-xs py-1.5 border-b border-slate-50 last:border-0">
-                        <p className="font-mono text-slate-400">{String(u.user_id || u[0] || '').slice(0, 8)}...</p>
-                        <div className="flex gap-3">
-                          <span className="text-slate-500">{u.count ?? u[1] ?? 0} sesiones</span>
-                          <span className="text-slate-400">{u.last_activity ?? u[2] ? new Date(u.last_activity ?? u[2]).toLocaleDateString('es-ES') : '—'}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+
             </motion.div>
           )}
 
@@ -622,9 +484,9 @@ function Dashboard({ orientador, onSalir }) {
                         <div className="flex items-center justify-between mb-4">
                           <div>
                             <p className="font-black text-slate-800 text-lg">{g.curso}</p>
-                            <p className="text-slate-400 text-xs">{g.total_alumnos} alumno{g.total_alumnos !== 1 ? 's' : ''} · {g.alumnos_con_test || 0} con test</p>
+                            <p className="text-slate-400 text-xs">{g.total_alumnos} alumnos · {g.alumnos_con_test == null ? `<${K_UMBRAL}` : g.alumnos_con_test} con test</p>
                           </div>
-                          {g.ansiedad_severa > 0 && (
+                          {g.ansiedad_severa >= K_UMBRAL && (
                             <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-lg">
                               ⚠️ {g.ansiedad_severa} severa
                             </span>
@@ -722,112 +584,67 @@ function Dashboard({ orientador, onSalir }) {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <KpiCard icon={GraduationCap} label="Docentes registrados"  value={docentes.length}      color="#6366f1" delay={0.05} />
-                    <KpiCard icon={Activity}      label="Sesiones totales"       value={totalSesDoc}          color="#f97316" delay={0.1} />
-                    <KpiCard icon={Calendar}      label="Activos esta semana"    value={docentesActivos7}     color="#0891b2" delay={0.15} sub="Últimos 7 días" />
-                    <KpiCard icon={TrendingUp}    label="Activos este mes"       value={docentesActivos30}    color="#10b981" delay={0.2}  sub="Últimos 30 días" />
-                  </div>
-
-                  {sinActiv14 > 0 && (
-                    <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100 flex items-start gap-3">
-                      <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-bold text-amber-800 text-sm">
-                          {sinActiv14} docente{sinActiv14 > 1 ? 's' : ''} sin actividad en +14 días
-                        </p>
-                        <p className="text-amber-700 text-xs mt-0.5">Podría ser útil contactar para valorar si necesitan apoyo.</p>
-                      </div>
+                  {!docResumen || docResumen.suprimido ? (
+                    <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-slate-100">
+                      <p className="text-4xl mb-2">👩‍🏫</p>
+                      <p className="font-bold text-slate-700">Datos de docentes no disponibles</p>
+                      <p className="text-slate-400 text-sm mt-1">
+                        Se muestran cuando hay al menos {K_UMBRAL} docentes registrados en el centro,
+                        para que ninguna cifra pueda atribuirse a una persona concreta.
+                      </p>
                     </div>
-                  )}
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <KpiCard icon={GraduationCap} label="Docentes registrados" value={docResumen.total_docentes} color="#6366f1" delay={0.05} />
+                        <KpiCard icon={Activity}      label="Sesiones totales"      value={docResumen.total_sesiones}  color="#f97316" delay={0.1} />
+                        <KpiCard icon={Calendar}      label="Activos esta semana"   value={docResumen.activos7}        color="#0891b2" delay={0.15} sub="Últimos 7 días" />
+                        <KpiCard icon={TrendingUp}    label="Activos este mes"      value={docResumen.activos30}       color="#10b981" delay={0.2}  sub="Últimos 30 días" />
+                      </div>
 
-                  {/* Uso por herramienta docentes */}
-                  {docentes.length > 0 && (
-                    <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-                      <p className="font-black text-slate-800 mb-4">Uso por herramienta (docentes)</p>
-                      <div className="space-y-3">
-                        {[
-                          { tipo: 'respiracion', label: 'Respiración', emoji: '🌬️', color: '#0891b2' },
-                          { tipo: 'relajacion',  label: 'Relajación',  emoji: '💆',  color: '#be185d' },
-                          { tipo: 'anclaje',     label: 'Anclaje',     emoji: '⚓',  color: '#1d4ed8' },
-                        ].map(h => {
-                          const total = docentes.reduce((a, d) => a + (d.porTipo[h.tipo] || 0), 0)
-                          const maxT  = Math.max(...['respiracion','relajacion','anclaje'].map(t => docentes.reduce((a, d) => a + (d.porTipo[t] || 0), 0)), 1)
-                          return (
-                            <div key={h.tipo}>
-                              <div className="flex items-center justify-between mb-1">
-                                <div className="flex items-center gap-2">
-                                  <span>{h.emoji}</span>
-                                  <span className="text-sm font-medium text-slate-700">{h.label}</span>
+                      <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+                        <p className="font-black text-slate-800 mb-4">Uso por herramienta (docentes)</p>
+                        <div className="space-y-3">
+                          {(() => {
+                            const pt = docResumen.por_tipo || {}
+                            const maxT = Math.max(pt.respiracion || 0, pt.relajacion || 0, pt.anclaje || 0, 1)
+                            return [
+                              { tipo: 'respiracion', label: 'Respiración', emoji: '🌬️', color: '#0891b2' },
+                              { tipo: 'relajacion',  label: 'Relajación',  emoji: '💆',  color: '#be185d' },
+                              { tipo: 'anclaje',     label: 'Anclaje',     emoji: '⚓',  color: '#1d4ed8' },
+                            ].map(h => {
+                              const total = pt[h.tipo] || 0
+                              return (
+                                <div key={h.tipo}>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-2">
+                                      <span>{h.emoji}</span>
+                                      <span className="text-sm font-medium text-slate-700">{h.label}</span>
+                                    </div>
+                                    <span className="font-black text-sm" style={{ color: h.color }}>{total} usos</span>
+                                  </div>
+                                  <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                                    <motion.div initial={{ width: 0 }} animate={{ width: `${Math.round((total / maxT) * 100)}%` }}
+                                      transition={{ duration: 0.8 }}
+                                      className="h-full rounded-full" style={{ background: h.color }} />
+                                  </div>
                                 </div>
-                                <span className="font-black text-sm" style={{ color: h.color }}>{total} usos</span>
-                              </div>
-                              <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                                <motion.div initial={{ width: 0 }} animate={{ width: `${Math.round((total / maxT) * 100)}%` }}
-                                  transition={{ duration: 0.8 }}
-                                  className="h-full rounded-full" style={{ background: h.color }} />
-                              </div>
-                            </div>
-                          )
-                        })}
+                              )
+                            })
+                          })()}
+                        </div>
                       </div>
-                    </div>
-                  )}
 
-                  {/* Listado individual */}
-                  <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-                    <p className="font-black text-slate-800 mb-1">Registro individual de docentes</p>
-                    <p className="text-slate-400 text-xs mb-4">Identificadores anonimizados · Solo datos de uso</p>
-                    {docentes.length === 0 ? (
-                      <div className="text-center py-8">
-                        <p className="text-4xl mb-2">👩‍🏫</p>
-                        <p className="font-bold text-slate-700">Sin docentes registrados aún</p>
-                        <p className="text-slate-400 text-sm mt-1">Los docentes deben registrarse seleccionando el rol "Docente"</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {docentes.map((d, i) => {
-                          const c = d.dias === null ? '#94a3b8' : d.dias <= 7 ? '#16a34a' : d.dias <= 14 ? '#ca8a04' : '#dc2626'
-                          const lbl = d.dias === null ? 'Sin sesiones' : d.dias === 0 ? 'Hoy' : `Hace ${d.dias}d`
-                          return (
-                            <motion.div key={d.hash}
-                              initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-                              className="rounded-2xl p-4 border"
-                              style={{ borderColor: d.dias !== null && d.dias > 14 ? '#fca5a5' : '#e2e8f0',
-                                       background: d.dias !== null && d.dias > 14 ? '#fef2f2' : 'white' }}>
-                              <div className="flex items-start justify-between mb-3">
-                                <div>
-                                  <p className="font-mono text-xs text-slate-400">ID: {d.hash}...</p>
-                                  <p className="text-xs text-slate-400 mt-0.5">
-                                    Registrado: {new Date(d.registrado).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                  </p>
-                                </div>
-                                <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ color: c, background: c + '15' }}>{lbl}</span>
-                              </div>
-                              <div className="grid grid-cols-4 gap-2 text-xs">
-                                <div className="bg-slate-50 rounded-xl p-2 text-center">
-                                  <p className="font-black text-slate-800">{d.total}</p>
-                                  <p className="text-slate-400">Total</p>
-                                </div>
-                                <div className="bg-cyan-50 rounded-xl p-2 text-center">
-                                  <p className="font-black text-cyan-700">{d.porTipo.respiracion}</p>
-                                  <p className="text-cyan-500">🌬️</p>
-                                </div>
-                                <div className="bg-rose-50 rounded-xl p-2 text-center">
-                                  <p className="font-black text-rose-700">{d.porTipo.relajacion}</p>
-                                  <p className="text-rose-400">💆</p>
-                                </div>
-                                <div className="bg-blue-50 rounded-xl p-2 text-center">
-                                  <p className="font-black text-blue-700">{d.porTipo.anclaje}</p>
-                                  <p className="text-blue-400">⚓</p>
-                                </div>
-                              </div>
-                            </motion.div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
+                      {docResumen.sin_actividad_14 >= K_UMBRAL && (
+                        <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100 flex items-start gap-3">
+                          <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                          <p className="text-amber-800 text-sm font-bold">
+                            {docResumen.sin_actividad_14} docentes sin actividad en +14 días
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
 
                   <button onClick={cargarDocentes}
                     className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl text-xs font-medium text-indigo-600 bg-indigo-50 border border-indigo-100">
