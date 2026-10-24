@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import OrientadorAcceso from '@/components/OrientadorAcceso'
+import ConvivenciaReceptorCard from '@/components/ConvivenciaReceptorCard'
 import { supabase } from '@/api/supabaseClient'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -326,6 +327,9 @@ function Dashboard({ orientador, onSalir }) {
           </button>
         </div>
       </div>
+
+      {/* Avisos de convivencia (solo se muestra a receptores; no enseña contenido) */}
+      <div className="empty:hidden mb-4"><ConvivenciaReceptorCard /></div>
 
       {/* Aviso privacidad */}
       <div className="bg-blue-50 rounded-2xl p-3 mb-4 flex items-start gap-2 border border-blue-100">
